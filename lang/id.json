@@ -1,0 +1,5 @@
+{
+    "The :attribute field is required.": "Kolom :attribute wajib diisi.",
+    "These credentials do not match our records.": "Email atau kata sandi salah.",
+    "Too many login attempts. Please try again in :seconds seconds.": "Terlalu banyak percobaan masuk. Coba lagi dalam :seconds detik."
+}
