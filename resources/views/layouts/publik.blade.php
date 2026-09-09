@@ -89,10 +89,17 @@
                     <svg class="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     <span>{{ \App\Support\Tanggal::panjang(now()) }}</span>
                 </div>
-                <a href="{{ route('login') }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-white transition">
-                    <span>Masuk Admin</span>
-                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
-                </a>
+                @auth
+                    <a href="{{ route('admin.dashboard') }}" class="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600/80 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-indigo-600 transition">
+                        <span>Buka Dashboard Admin</span>
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+                    </a>
+                @else
+                    <a href="{{ route('login') }}" class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-white transition">
+                        <span>Masuk Admin</span>
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+                    </a>
+                @endauth
             </div>
         </div>
     </div>
@@ -117,9 +124,15 @@
         </p>
         <div class="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-400">
             <p>&copy; {{ date('Y') }} Absensi {{ $pengaturan['nama_kelas'] }}. Hak cipta dilindungi.</p>
-            <a href="{{ route('login') }}" class="font-semibold text-indigo-600 hover:text-indigo-700 transition">
-                Portal Masuk Wali &amp; Pengurus Kelas &rarr;
-            </a>
+            @auth
+                <a href="{{ route('admin.dashboard') }}" class="font-semibold text-indigo-600 hover:text-indigo-700 transition">
+                    Buka Dashboard Admin &rarr;
+                </a>
+            @else
+                <a href="{{ route('login') }}" class="font-semibold text-indigo-600 hover:text-indigo-700 transition">
+                    Portal Masuk Wali &amp; Pengurus Kelas &rarr;
+                </a>
+            @endauth
         </div>
     </div>
 </footer>
