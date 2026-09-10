@@ -339,4 +339,49 @@ class MasterDataTest extends TestCase
         $this->assertNotEmpty($tersimpan);
         Storage::disk('public')->assertExists($tersimpan);
     }
+
+    public function test_reset_total_siswa_menghapus_semua_siswa_dan_absensi(): void
+    {
+        $siswa1 = Student::create(['no_absen' => 1, 'nama' => 'Ani', 'jenis_kelamin' => 'P']);
+        $siswa2 = Student::create(['no_absen' => 2, 'nama' => 'Budi', 'jenis_kelamin' => 'L']);
+
+        DailyAttendance::create([
+            'student_id' => $siswa1->id,
+            'tanggal' => now()->toDateString(),
+            'status' => 'hadir',
+        ]);
+
+        $this->actingAs($this->wali)
+            ->delete('/admin/siswa/reset', [
+                'konfirmasi' => 'HAPUS',
+                'hapus_absensi' => 1,
+            ])
+            ->assertSessionHas('sukses')
+            ->assertRedirect(route('admin.siswa.index'));
+
+        $this->assertDatabaseCount('students', 0);
+        $this->assertDatabaseCount('daily_attendances', 0);
+    }
+
+    public function test_reset_total_siswa_ditolak_jika_konfirmasi_salah(): void
+    {
+        Student::create(['no_absen' => 1, 'nama' => 'Ani', 'jenis_kelamin' => 'P']);
+
+        $this->actingAs($this->wali)
+            ->delete('/admin/siswa/reset', [
+                'konfirmasi' => 'SALAH',
+            ])
+            ->assertSessionHasErrors('konfirmasi');
+
+        $this->assertDatabaseCount('students', 1);
+    }
+
+    public function test_reset_total_siswa_ditolak_jika_data_kosong(): void
+    {
+        $this->actingAs($this->wali)
+            ->delete('/admin/siswa/reset', [
+                'konfirmasi' => 'HAPUS',
+            ])
+            ->assertSessionHas('gagal');
+    }
 }

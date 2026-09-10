@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StudentRequest;
+use App\Models\DailyAttendance;
 use App\Models\Student;
+use App\Models\SubjectAttendance;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,6 +85,34 @@ class StudentController extends Controller
         $siswa->delete();
 
         return back()->with('sukses', 'Siswa berhasil dihapus.');
+    }
+
+    public function resetTotal(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'konfirmasi' => ['required', 'string', 'in:HAPUS,hapus,RESET,reset'],
+            'hapus_absensi' => ['nullable', 'boolean'],
+        ], [
+            'konfirmasi.in' => 'Ketik kata HAPUS untuk mengonfirmasi reset data siswa.',
+        ]);
+
+        $jumlahSiswa = Student::count();
+
+        if ($jumlahSiswa === 0) {
+            return back()->with('gagal', 'Tidak ada data siswa untuk direset.');
+        }
+
+        DB::transaction(function () use ($request) {
+            if ($request->boolean('hapus_absensi', true)) {
+                DailyAttendance::query()->delete();
+                SubjectAttendance::query()->delete();
+            }
+
+            Student::query()->delete();
+        });
+
+        return redirect()->route('admin.siswa.index')
+            ->with('sukses', "Berhasil mereset total {$jumlahSiswa} data siswa. Seluruh data siswa kini telah bersih.");
     }
 
     public function exportCsv(): StreamedResponse

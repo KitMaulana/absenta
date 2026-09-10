@@ -61,6 +61,7 @@ Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(fu
     Route::get('siswa/export', [StudentController::class, 'exportCsv'])->name('siswa.export');
     Route::get('siswa/import', [StudentController::class, 'importForm'])->name('siswa.import.form');
     Route::post('siswa/import', [StudentController::class, 'import'])->name('siswa.import');
+    Route::delete('siswa/reset', [StudentController::class, 'resetTotal'])->name('siswa.reset');
     Route::patch('siswa/{siswa}/toggle', [StudentController::class, 'toggle'])->name('siswa.toggle');
     Route::resource('siswa', StudentController::class)->except(['show']);
 
