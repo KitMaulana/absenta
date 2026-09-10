@@ -12,7 +12,7 @@
                 <label for="file" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Pilih Berkas CSV</label>
                 <input id="file" name="file" type="file" accept=".csv,text/csv" required
                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 p-2 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white hover:file:bg-slate-800">
-                <p class="mt-1 text-[11px] text-slate-400">Ukuran berkas maksimal 2 MB. Pastikan encoding UTF-8 dengan pemisah koma (,).</p>
+                <p class="mt-1 text-[11px] text-slate-400">Ukuran berkas maksimal 2 MB. Mendukung pemisah koma (,) atau titik koma (;).</p>
             </div>
 
             <fieldset class="space-y-2.5">
@@ -21,7 +21,7 @@
                     <input type="radio" name="mode" value="tambah" checked class="mt-0.5 border-slate-300 text-indigo-600 focus:ring-indigo-500">
                     <div>
                         <strong class="text-slate-900 font-bold block">Tambah / Perbarui Otomatis</strong>
-                        <span class="text-slate-500 mt-0.5 block leading-relaxed">Siswa dicocokkan berdasarkan nama. Siswa yang belum ada akan ditambahkan, yang sudah ada diperbarui datanya. Siswa lain tidak akan diubah.</span>
+                        <span class="text-slate-500 mt-0.5 block leading-relaxed">Siswa dicocokkan berdasarkan NISN (atau nama jika NISN tidak diisi). Siswa yang belum ada akan ditambahkan, yang sudah ada diperbarui datanya. Siswa lain tidak akan diubah.</span>
                     </div>
                 </label>
                 <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-3.5 text-xs cursor-pointer hover:bg-slate-50/70 transition has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50/40">

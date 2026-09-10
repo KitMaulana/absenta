@@ -119,6 +119,113 @@ class MasterDataTest extends TestCase
         $this->assertDatabaseCount('students', 0);
     }
 
+    public function test_import_csv_memperbarui_siswa_dengan_nisn_sama_tanpa_duplicate_exception(): void
+    {
+        Student::create([
+            'no_absen' => 10,
+            'nama' => 'Nida Nur Faida',
+            'nisn' => '0084668554',
+            'jenis_kelamin' => 'P',
+        ]);
+
+        $csv = "no_absen,nama,nisn,jenis_kelamin\n35,NIDA NUR FAIDA,0084668554,P\n";
+
+        $this->actingAs($this->wali)
+            ->post('/admin/siswa/import', [
+                'file' => UploadedFile::fake()->createWithContent('siswa.csv', $csv),
+                'mode' => 'tambah',
+            ])
+            ->assertSessionHas('sukses');
+
+        $this->assertDatabaseCount('students', 1);
+        $this->assertDatabaseHas('students', [
+            'nama' => 'NIDA NUR FAIDA',
+            'no_absen' => 35,
+            'nisn' => '0084668554',
+            'jenis_kelamin' => 'P',
+        ]);
+    }
+
+    public function test_import_csv_mendukung_format_excel_petik_pada_nisn(): void
+    {
+        $csv = "no_absen,nama,nisn,jenis_kelamin\n1,Budi Santoso,'0084668555,L\n";
+
+        $this->actingAs($this->wali)
+            ->post('/admin/siswa/import', [
+                'file' => UploadedFile::fake()->createWithContent('siswa.csv', $csv),
+                'mode' => 'tambah',
+            ])
+            ->assertSessionHas('sukses');
+
+        $this->assertDatabaseHas('students', [
+            'nama' => 'Budi Santoso',
+            'nisn' => '0084668555',
+        ]);
+    }
+
+    public function test_import_csv_melewati_nisn_duplikat_dalam_file(): void
+    {
+        $csv = "no_absen,nama,nisn,jenis_kelamin\n1,Siswa Satu,0011223344,L\n2,Siswa Dua,0011223344,L\n";
+
+        $this->actingAs($this->wali)
+            ->post('/admin/siswa/import', [
+                'file' => UploadedFile::fake()->createWithContent('siswa.csv', $csv),
+                'mode' => 'tambah',
+            ])
+            ->assertSessionHas('sukses');
+
+        $this->assertDatabaseCount('students', 1);
+        $this->assertDatabaseHas('students', ['nama' => 'Siswa Satu']);
+    }
+
+    public function test_import_csv_mendukung_delimiter_titik_koma(): void
+    {
+        $csv = "no_absen;nama;nisn;jenis_kelamin\n1;Citra Lestari;0099887766;P\n";
+
+        $this->actingAs($this->wali)
+            ->post('/admin/siswa/import', [
+                'file' => UploadedFile::fake()->createWithContent('siswa.csv', $csv),
+                'mode' => 'tambah',
+            ])
+            ->assertSessionHas('sukses');
+
+        $this->assertDatabaseCount('students', 1);
+        $this->assertDatabaseHas('students', [
+            'nama' => 'Citra Lestari',
+            'nisn' => '0099887766',
+        ]);
+    }
+
+    public function test_import_csv_mode_ganti_mempertahankan_siswa_berriwayat_dan_memperbarui_nisn(): void
+    {
+        $lama = Student::create([
+            'no_absen' => 1,
+            'nama' => 'Nida Nur Faida',
+            'nisn' => '0084668554',
+            'jenis_kelamin' => 'P',
+        ]);
+
+        DailyAttendance::create([
+            'student_id' => $lama->id,
+            'tanggal' => now()->toDateString(),
+            'status' => 'hadir',
+        ]);
+
+        $csv = "no_absen,nama,nisn,jenis_kelamin\n35,NIDA NUR FAIDA,0084668554,P\n";
+
+        $this->actingAs($this->wali)
+            ->post('/admin/siswa/import', [
+                'file' => UploadedFile::fake()->createWithContent('siswa.csv', $csv),
+                'mode' => 'ganti',
+            ])
+            ->assertSessionHas('sukses');
+
+        $this->assertDatabaseCount('students', 1);
+        $this->assertTrue($lama->fresh()->is_active);
+        $this->assertSame('NIDA NUR FAIDA', $lama->fresh()->nama);
+        $this->assertSame(35, $lama->fresh()->no_absen);
+    }
+
     public function test_export_csv_berisi_header_dan_data(): void
     {
         Student::create(['no_absen' => 3, 'nama' => 'Citra', 'jenis_kelamin' => 'P', 'nisn' => '0011']);
