@@ -67,6 +67,12 @@ Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(fu
 
     // Master data — mata pelajaran, jadwal, hari libur
     Route::resource('mapel', SubjectController::class)->except(['show']);
+    Route::get('jadwal/template', [ScheduleController::class, 'downloadTemplate'])->name('jadwal.template');
+    Route::get('jadwal/import', [ScheduleController::class, 'showImport'])->name('jadwal.import.form');
+    Route::post('jadwal/import', [ScheduleController::class, 'importCsv'])->name('jadwal.import');
+    Route::get('jadwal/tambah-massal', [ScheduleController::class, 'bulkCreate'])->name('jadwal.bulk.create');
+    Route::post('jadwal/tambah-massal', [ScheduleController::class, 'bulkStore'])->name('jadwal.bulk.store');
+    Route::post('jadwal/bulk-delete', [ScheduleController::class, 'bulkDestroy'])->name('jadwal.bulk.destroy');
     Route::resource('jadwal', ScheduleController::class)->except(['show']);
     Route::resource('libur', HolidayController::class)->only(['index', 'store', 'update', 'destroy']);
 

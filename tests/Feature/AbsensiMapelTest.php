@@ -173,4 +173,59 @@ class AbsensiMapelTest extends TestCase
             ->assertOk()
             ->assertSee('Absensi umum hari ini sudah diinput', false);
     }
+
+    public function test_menyimpan_absensi_per_mapel_sekaligus_ke_seluruh_jp(): void
+    {
+        // Simulasi mapel Bahasa Indonesia 3 JP (JP 1, JP 2, JP 3)
+        $jp1 = $this->jadwal(1);
+        $jp2 = $this->jadwal(2);
+        $jp3 = $this->jadwal(3);
+
+        $this->actingAs($this->admin)
+            ->post('/admin/absensi-mapel', [
+                'tanggal' => $this->senin->toDateString(),
+                'schedule_ids' => [$jp1->id, $jp2->id, $jp3->id],
+                'status' => [$this->siswa->id => 'hadir'],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('sukses');
+
+        // Pastikan di ketiga JP siswa tercatat hadir
+        $this->assertDatabaseCount('subject_attendances', 3);
+        foreach ([$jp1->id, $jp2->id, $jp3->id] as $scheduleId) {
+            $this->assertDatabaseHas('subject_attendances', [
+                'student_id' => $this->siswa->id,
+                'schedule_id' => $scheduleId,
+                'status' => 'hadir',
+            ]);
+        }
+    }
+
+    public function test_menyimpan_absensi_per_mapel_status_tidak_hadir_ke_seluruh_jp(): void
+    {
+        $jp1 = $this->jadwal(1);
+        $jp2 = $this->jadwal(2);
+        $jp3 = $this->jadwal(3);
+
+        $this->actingAs($this->admin)
+            ->post('/admin/absensi-mapel', [
+                'tanggal' => $this->senin->toDateString(),
+                'schedule_ids' => [$jp1->id, $jp2->id, $jp3->id],
+                'status' => [$this->siswa->id => 'sakit'],
+                'keterangan' => [$this->siswa->id => 'Demam tinggi'],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('sukses');
+
+        $this->assertDatabaseCount('subject_attendances', 3);
+        foreach ([$jp1->id, $jp2->id, $jp3->id] as $scheduleId) {
+            $this->assertDatabaseHas('subject_attendances', [
+                'student_id' => $this->siswa->id,
+                'schedule_id' => $scheduleId,
+                'status' => 'sakit',
+                'keterangan' => 'Demam tinggi',
+            ]);
+        }
+    }
 }
+

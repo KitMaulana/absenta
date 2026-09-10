@@ -5,7 +5,6 @@
 @php
     use App\Enums\AttendanceStatus;
     $statusLain = AttendanceStatus::tidakHadir();
-    $jpAktif = (int) request('jp', $jadwal->first()->jam_ke ?? 0);
 @endphp
 
 @section('content')
@@ -48,7 +47,7 @@
         @endif
     </x-card>
 
-    @if ($jadwal->isEmpty())
+    @if ($sesiMapel->isEmpty())
         <x-card>
             <x-kosong pesan="Tidak ada jadwal pelajaran yang tercatat untuk hari {{ $namaHari }}." ikon="🕘">
                 <a href="{{ route('admin.jadwal.index') }}" class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-700 transition">
@@ -59,55 +58,84 @@
     @elseif ($siswa->isEmpty())
         <x-card><x-kosong pesan="Belum ada siswa aktif di kelas ini." ikon="🧑‍🎓" /></x-card>
     @else
-        <div x-data="{ jp: {{ $jpAktif }} }">
-            {{-- Tab per Jam Pelajaran --}}
-            <div class="mb-5 flex gap-2 overflow-x-auto pb-1.5">
-                @foreach ($jadwal as $j)
-                    @php $terisi = $tersimpan->has($j->id); @endphp
-                    <button type="button" @click="jp = {{ $j->jam_ke }}"
-                            class="flex shrink-0 items-center gap-2.5 rounded-2xl border px-4 py-2.5 text-xs font-bold transition-all shadow-2xs"
-                            :class="jp === {{ $j->jam_ke }}
-                                ? 'border-slate-900 bg-slate-900 text-white shadow-md'
-                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'">
-                        <span class="grid h-6 w-6 place-items-center rounded-lg text-xs font-black text-white" style="background-color: {{ $j->subject->warna }}">
-                            {{ $j->jam_ke }}
-                        </span>
-                        <span class="tracking-tight">{{ $j->subject->singkatan }}</span>
-                        @if ($terisi)
-                            <span class="grid h-4 w-4 place-items-center rounded-full bg-emerald-500/20 text-emerald-400 text-[10px]">✓</span>
-                        @else
-                            <span class="grid h-4 w-4 place-items-center rounded-full bg-amber-500/20 text-amber-400 text-[10px]">!</span>
-                        @endif
-                    </button>
-                @endforeach
+        <div x-data="{ sesiAktif: '{{ $sesiAktif }}' }">
+            {{-- Navigasi Tab Sesi Mata Pelajaran (Per Mapel) --}}
+            <div class="mb-5">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Pilih Mata Pelajaran Hari {{ $namaHari }}</p>
+                    <span class="text-xs text-slate-400">{{ $sesiMapel->count() }} Mata Pelajaran ({{ $jadwal->count() }} JP)</span>
+                </div>
+                <div class="flex gap-2.5 overflow-x-auto pb-2">
+                    @foreach ($sesiMapel as $sesi)
+                        <button type="button" @click="sesiAktif = '{{ $sesi->id }}'"
+                                class="flex shrink-0 items-center gap-3 rounded-2xl border p-3 text-xs font-bold transition-all shadow-2xs text-left"
+                                :class="sesiAktif === '{{ $sesi->id }}'
+                                    ? 'border-slate-900 bg-slate-900 text-white shadow-md'
+                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300'">
+                            <span class="grid h-9 w-9 place-items-center rounded-xl text-xs font-black text-white shrink-0 shadow-2xs" style="background-color: {{ $sesi->subject->warna }}">
+                                {{ $sesi->subject->singkatan }}
+                            </span>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-bold text-sm tracking-tight truncate">{{ $sesi->subject->nama }}</span>
+                                    @if ($sesi->terisi)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                                            ✓ Terisi
+                                        </span>
+                                    @elseif ($sesi->terisi_sebagian)
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+                                            ~ Sebagian
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-slate-500/20 px-2 py-0.5 text-[10px] font-bold text-slate-400">
+                                            ! Belum
+                                        </span>
+                                    @endif
+                                </div>
+                                <p class="text-[11px] font-medium opacity-80 mt-0.5">
+                                    {{ $sesi->label_jp }} {{ $sesi->rentang_waktu ? '· ' . $sesi->rentang_waktu : '' }}
+                                </p>
+                            </div>
+                        </button>
+                    @endforeach
+                </div>
             </div>
 
-            @foreach ($jadwal as $j)
-                <div x-show="jp === {{ $j->jam_ke }}" x-cloak>
+            @foreach ($sesiMapel as $sesi)
+                <div x-show="sesiAktif === '{{ $sesi->id }}'" x-cloak>
                     <form method="POST" action="{{ route('admin.absensi-mapel.store') }}"
-                          x-data="absensiJp({{ $j->id }})" x-init="root = $el; hitung()">
+                          x-data="absensiSesi('{{ $sesi->id }}', {{ json_encode($sesi->schedule_ids) }})" x-init="root = $el; hitung()">
                         @csrf
                         <input type="hidden" name="tanggal" value="{{ $tanggal->toDateString() }}">
-                        <input type="hidden" name="schedule_id" value="{{ $j->id }}">
+                        <input type="hidden" name="sesi_id" value="{{ $sesi->id }}">
+                        @foreach ($sesi->schedule_ids as $sid)
+                            <input type="hidden" name="schedule_ids[]" value="{{ $sid }}">
+                        @endforeach
 
                         <x-card padat>
                             <x-slot:judul>
-                                <div class="flex items-center gap-2.5">
-                                    <span class="grid h-6 w-6 place-items-center rounded-md text-xs font-black text-white" style="background-color: {{ $j->subject->warna }}">
-                                        {{ $j->jam_ke }}
+                                <div class="flex items-center gap-3">
+                                    <span class="grid h-8 w-8 place-items-center rounded-xl text-xs font-black text-white shadow-2xs" style="background-color: {{ $sesi->subject->warna }}">
+                                        {{ $sesi->subject->singkatan }}
                                     </span>
                                     <div>
-                                        <span class="font-bold text-slate-900 text-sm">JP {{ $j->jam_ke }} &mdash; {{ $j->subject->nama }}</span>
-                                        <span class="ml-1 text-xs font-normal text-slate-400">
-                                            {{ $j->jamRentang() ? '('.$j->jamRentang().')' : '' }}
-                                            @if ($j->guru_pengampu) &middot; {{ $j->guru_pengampu }} @endif
-                                        </span>
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold text-slate-900 text-sm sm:text-base">{{ $sesi->subject->nama }}</span>
+                                            <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700 border border-indigo-100">
+                                                {{ $sesi->total_jp }} Jam Pelajaran
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-slate-400 mt-0.5">
+                                            {{ $sesi->label_jp }}
+                                            @if ($sesi->rentang_waktu) &middot; Pukul {{ $sesi->rentang_waktu }} WIB @endif
+                                            @if ($sesi->guru_pengampu) &middot; Guru: <strong>{{ $sesi->guru_pengampu }}</strong> @endif
+                                        </p>
                                     </div>
                                 </div>
                             </x-slot:judul>
                             <x-slot:aksi>
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <span class="hidden sm:inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200/60">
+                                    <span class="hidden sm:inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200/60">
                                         Hadir: <strong class="tabular-nums" x-text="jumlahHadir"></strong> / {{ $siswa->count() }}
                                     </span>
                                     <button type="button" @click="centangSemua()"
@@ -123,11 +151,19 @@
                                     @if (! $loop->first)
                                         <button type="button" @click="salin('jp_sebelumnya')"
                                                 class="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 transition">
-                                            <span>Salin dari JP Sebelumnya</span>
+                                            <span>Salin dari Mapel Sebelumnya</span>
                                         </button>
                                     @endif
                                 </div>
                             </x-slot:aksi>
+
+                            {{-- Pemberitahuan penting input per mapel --}}
+                            <div class="border-b border-indigo-100 bg-indigo-50/60 px-5 py-2.5 text-xs text-indigo-900 flex items-center gap-2">
+                                <svg class="h-4 w-4 text-indigo-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>
+                                    Absensi ini berlaku untuk <strong>seluruh {{ $sesi->total_jp }} Jam Pelajaran</strong> ({{ implode(', ', array_map(fn($n) => 'JP '.$n, $sesi->jam_ke_list)) }}). Siswa yang dinyatakan Hadir otomatis tercatat hadir di semua {{ $sesi->total_jp }} JP.
+                                </span>
+                            </div>
 
                             <p x-show="pesan" x-cloak x-text="pesan" class="border-b border-amber-200 bg-amber-50 px-5 py-2.5 text-xs font-semibold text-amber-800"></p>
 
@@ -137,7 +173,7 @@
                                         <tr>
                                             <th class="w-12 px-4 py-3 font-bold text-center">No</th>
                                             <th class="px-4 py-3 font-bold">Nama Siswa</th>
-                                            <th class="px-4 py-3 text-center font-bold">Hadir</th>
+                                            <th class="px-4 py-3 text-center font-bold">Hadir ({{ $sesi->total_jp }} JP)</th>
                                             <th class="px-4 py-3 font-bold">Status Jika Tidak Hadir</th>
                                             <th class="px-4 py-3 font-bold">Keterangan</th>
                                         </tr>
@@ -145,7 +181,7 @@
                                     <tbody class="divide-y divide-slate-100">
                                         @foreach ($siswa as $s)
                                             @php
-                                                $rec = $tersimpan->get($j->id)?->get($s->id);
+                                                $rec = $sesi->data_tersimpan?->get($s->id);
                                                 $nilai = $rec?->status->value ?? $umum[$s->id] ?? AttendanceStatus::Hadir->value;
                                                 $hadir = $nilai === AttendanceStatus::Hadir->value;
                                             @endphp
@@ -191,18 +227,18 @@
                                 </table>
                             </div>
 
-                            {{-- Footer Simpan JP --}}
+                            {{-- Footer Simpan Sesi Mapel --}}
                             <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 px-5 py-4 rounded-b-2xl">
                                 <p class="text-xs text-slate-500 text-center sm:text-left">
                                     Centang = Hadir. Yang tidak dicentang wajib dipilih status S / I / A / D.
-                                    @if ($terakhir = $tersimpan->get($j->id)?->max('updated_at'))
+                                    @if ($terakhir = $sesi->terakhir_diperbarui)
                                         <span class="block text-slate-400 mt-0.5">Terakhir diperbarui {{ \App\Support\Tanggal::pendek($terakhir) }} pukul {{ $terakhir->format('H:i') }} WIB.</span>
                                     @endif
                                 </p>
                                 <button type="submit"
                                         class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-600/25 hover:from-indigo-500 hover:to-indigo-600 transition">
                                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                                    <span>Simpan JP {{ $j->jam_ke }}</span>
+                                    <span>Simpan Absensi {{ $sesi->subject->singkatan }} ({{ $sesi->total_jp }} JP)</span>
                                 </button>
                             </div>
                         </x-card>
@@ -215,9 +251,10 @@
 
 @push('scripts')
 <script>
-function absensiJp(scheduleId) {
+function absensiSesi(sesiId, scheduleIds) {
     return {
-        scheduleId,
+        sesiId,
+        scheduleIds,
         jumlahHadir: 0,
         pesan: '',
         root: null,
@@ -261,7 +298,7 @@ function absensiJp(scheduleId) {
                     },
                     body: JSON.stringify({
                         tanggal: '{{ $tanggal->toDateString() }}',
-                        schedule_id: this.scheduleId,
+                        schedule_ids: this.scheduleIds,
                         dari,
                     }),
                 });

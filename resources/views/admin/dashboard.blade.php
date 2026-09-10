@@ -97,22 +97,52 @@
                         Belum ada jadwal mata pelajaran untuk hari ini.
                     </p>
                 @else
+                    @php
+                        $sesiDashboard = collect();
+                        $currentBlock = collect();
+                        foreach ($jadwalHariIni as $j) {
+                            if ($currentBlock->isEmpty()) {
+                                $currentBlock->push($j);
+                                continue;
+                            }
+                            $last = $currentBlock->last();
+                            if ($last->subject_id === $j->subject_id && $j->jam_ke === $last->jam_ke + 1) {
+                                $currentBlock->push($j);
+                            } else {
+                                $sesiDashboard->push($currentBlock);
+                                $currentBlock = collect([$j]);
+                            }
+                        }
+                        if ($currentBlock->isNotEmpty()) {
+                            $sesiDashboard->push($currentBlock);
+                        }
+                    @endphp
                     <div class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                        @foreach ($jadwalHariIni as $j)
+                        @foreach ($sesiDashboard as $block)
+                            @php
+                                $first = $block->first();
+                                $last = $block->last();
+                                $count = $block->count();
+                                $labelJp = $count > 1 ? 'JP ' . $first->jam_ke . '–' . $last->jam_ke : 'JP ' . $first->jam_ke;
+                                $terisi = $block->every(fn($item) => $jpTerisi->has($item->id));
+                            @endphp
                             <div class="flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-2 text-xs">
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <span class="grid h-5 w-5 shrink-0 place-items-center rounded-md text-[10px] font-extrabold text-white" style="background-color: {{ $j->subject->warna }}">
-                                        {{ $j->jam_ke }}
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <span class="grid h-6 w-6 shrink-0 place-items-center rounded-md text-[10px] font-black text-white" style="background-color: {{ $first->subject->warna }}">
+                                        {{ $first->subject->singkatan }}
                                     </span>
-                                    <span class="truncate font-semibold text-slate-800">{{ $j->subject->nama }}</span>
+                                    <div class="min-w-0">
+                                        <p class="truncate font-semibold text-slate-800">{{ $first->subject->nama }}</p>
+                                        <p class="text-[10px] text-slate-400">{{ $labelJp }} ({{ $count }} JP) @if($first->jamRentang()) &middot; {{ $first->jamRentang() }} @endif</p>
+                                    </div>
                                 </div>
-                                @if ($jpTerisi->has($j->id))
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200/60">
+                                @if ($terisi)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200/60 shrink-0">
                                         <svg class="h-2.5 w-2.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                                         Terisi
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200/60">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200/60 shrink-0">
                                         Belum
                                     </span>
                                 @endif

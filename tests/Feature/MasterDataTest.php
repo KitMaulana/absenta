@@ -332,7 +332,7 @@ class MasterDataTest extends TestCase
             'tahun_ajaran' => '2026/2027',
             'semester' => 'Ganjil',
             'hari_aktif' => ['senin'],
-            'logo' => UploadedFile::fake()->image('logo.png', 64, 64),
+            'logo' => UploadedFile::fake()->create('logo.png', 10, 'image/png'),
         ])->assertSessionHas('sukses');
 
         $tersimpan = Setting::get('logo');
