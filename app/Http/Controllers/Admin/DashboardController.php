@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Holiday;
 use App\Models\Schedule;
 use App\Models\Setting;
 use App\Models\SubjectAttendance;
@@ -16,6 +17,7 @@ class DashboardController extends Controller
     {
         $hariIni = CarbonImmutable::today();
         $awalBulan = $hariIni->startOfMonth();
+        $liburHariIni = Holiday::whereDate('tanggal', $hariIni)->first();
 
         $hari = Schedule::hariDari($hariIni);
         $jadwalHariIni = Schedule::with('subject')->where('hari', $hari)->orderBy('jam_ke')->get();
@@ -29,6 +31,7 @@ class DashboardController extends Controller
 
         return view('admin.dashboard', [
             'hariIni' => $hariIni,
+            'liburHariIni' => $liburHariIni,
             'ringkasan' => $rekap->ringkasanHarian($hariIni),
             'bulanIni' => $rekap->ringkasanPeriode($awalBulan, $hariIni),
             'tren' => $tren,

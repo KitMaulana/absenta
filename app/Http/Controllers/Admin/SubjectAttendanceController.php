@@ -96,6 +96,11 @@ class SubjectAttendanceController extends Controller
         }
 
         $tanggal = CarbonImmutable::parse($data['tanggal'])->toDateString();
+
+        if ($libur = Holiday::whereDate('tanggal', $tanggal)->first()) {
+            return back()->with('gagal', "Tanggal {$tanggal} terdaftar sebagai hari libur ({$libur->keterangan}). Absensi mata pelajaran tidak dapat diinput.");
+        }
+
         $idSiswaAktif = Student::aktif()->pluck('id')->flip();
         $userId = $request->user()->id;
         $jumlahSiswa = 0;
@@ -167,6 +172,10 @@ class SubjectAttendanceController extends Controller
         ]);
 
         $tanggal = CarbonImmutable::parse($data['tanggal'])->toDateString();
+
+        if ($libur = Holiday::whereDate('tanggal', $tanggal)->first()) {
+            return response()->json(['pesan' => "Tanggal ini adalah hari libur ({$libur->keterangan})."], 422);
+        }
 
         $scheduleId = ! empty($data['schedule_ids'])
             ? (int) $data['schedule_ids'][0]

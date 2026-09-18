@@ -52,6 +52,19 @@ class RekapService
     /** Rekap absensi umum satu hari: jumlah per status. */
     public function ringkasanHarian(CarbonImmutable $tanggal): array
     {
+        $libur = Holiday::whereDate('tanggal', $tanggal)->first();
+        if ($libur) {
+            $hasil = self::hitunganKosong();
+            $hasil['total'] = 0;
+            $hasil['siswa_aktif'] = Student::aktif()->count();
+            $hasil['sudah_diinput'] = false;
+            $hasil['persen'] = 0.0;
+            $hasil['is_libur'] = true;
+            $hasil['libur'] = $libur;
+
+            return $hasil;
+        }
+
         $hitung = DB::table('daily_attendances')
             ->where('tanggal', $tanggal->toDateString())
             ->join('students', 'students.id', '=', 'daily_attendances.student_id')
@@ -66,6 +79,8 @@ class RekapService
         $hasil['siswa_aktif'] = Student::aktif()->count();
         $hasil['sudah_diinput'] = $hasil['total'] > 0;
         $hasil['persen'] = self::persen($hasil['hadir'] + $hasil['dispensasi'], $hasil['total']);
+        $hasil['is_libur'] = false;
+        $hasil['libur'] = null;
 
         return $hasil;
     }
@@ -75,6 +90,7 @@ class RekapService
     {
         $hitung = DB::table('daily_attendances')
             ->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])
+            ->whereNotIn('tanggal', DB::table('holidays')->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])->select('tanggal'))
             ->join('students', 'students.id', '=', 'daily_attendances.student_id')
             ->where('students.is_active', true)
             ->selectRaw('status, COUNT(*) as jumlah')
@@ -137,6 +153,7 @@ class RekapService
             ->join('students as st', 'st.id', '=', 'sa.student_id')
             ->where('st.is_active', true)
             ->whereBetween('sa.tanggal', [$mulai->toDateString(), $selesai->toDateString()])
+            ->whereNotIn('sa.tanggal', DB::table('holidays')->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])->select('tanggal'))
             ->selectRaw("s.id, s.nama, s.singkatan, s.warna,
                          SUM(sa.status IN ('hadir','dispensasi')) as hadir,
                          COUNT(*) as total")
@@ -161,6 +178,7 @@ class RekapService
     {
         $hitung = DB::table('daily_attendances')
             ->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])
+            ->whereNotIn('tanggal', DB::table('holidays')->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])->select('tanggal'))
             ->selectRaw('student_id, status, COUNT(*) as jumlah')
             ->groupBy('student_id', 'status')
             ->get()
@@ -199,6 +217,7 @@ class RekapService
 
         DB::table('daily_attendances')
             ->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])
+            ->whereNotIn('tanggal', DB::table('holidays')->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])->select('tanggal'))
             ->select('student_id', 'tanggal', 'status')
             ->orderBy('tanggal')
             ->chunk(2000, function ($rows) use (&$matriks) {
@@ -221,6 +240,7 @@ class RekapService
             ->join('schedules as sc', 'sc.id', '=', 'sa.schedule_id')
             ->where('sc.subject_id', $subjectId)
             ->whereBetween('sa.tanggal', [$mulai->toDateString(), $selesai->toDateString()])
+            ->whereNotIn('sa.tanggal', DB::table('holidays')->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])->select('tanggal'))
             ->selectRaw('sa.student_id, sa.status, COUNT(*) as jumlah')
             ->groupBy('sa.student_id', 'sa.status')
             ->get()
@@ -252,6 +272,7 @@ class RekapService
             ->join('subjects as s', 's.id', '=', 'sc.subject_id')
             ->where('sa.student_id', $studentId)
             ->whereBetween('sa.tanggal', [$mulai->toDateString(), $selesai->toDateString()])
+            ->whereNotIn('sa.tanggal', DB::table('holidays')->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])->select('tanggal'))
             ->selectRaw("s.nama, s.singkatan, s.warna,
                          SUM(sa.status = 'hadir') as hadir,
                          SUM(sa.status = 'sakit') as sakit,
@@ -284,6 +305,7 @@ class RekapService
             ->where('s.is_active', true)
             ->where('da.status', 'alpa')
             ->whereBetween('da.tanggal', [$mulai->toDateString(), $selesai->toDateString()])
+            ->whereNotIn('da.tanggal', DB::table('holidays')->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])->select('tanggal'))
             ->selectRaw('s.id, s.nama, s.no_absen, COUNT(*) as alpa')
             ->groupBy('s.id', 's.nama', 's.no_absen')
             ->havingRaw('COUNT(*) >= ?', [$ambang])
@@ -294,6 +316,10 @@ class RekapService
     /** Daftar siswa yang tidak hadir pada satu tanggal (untuk halaman publik). */
     public function tidakHadirPada(CarbonImmutable $tanggal): Collection
     {
+        if (Holiday::whereDate('tanggal', $tanggal)->exists()) {
+            return collect();
+        }
+
         return DB::table('daily_attendances as da')
             ->join('students as s', 's.id', '=', 'da.student_id')
             ->where('s.is_active', true)

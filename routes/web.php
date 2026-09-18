@@ -47,6 +47,8 @@ Route::middleware(['auth', 'active'])->prefix('admin')->name('admin.')->group(fu
     // Absensi umum harian
     Route::get('absensi-umum', [DailyAttendanceController::class, 'index'])->name('absensi-umum.index');
     Route::post('absensi-umum', [DailyAttendanceController::class, 'store'])->name('absensi-umum.store');
+    Route::post('absensi-umum/libur', [DailyAttendanceController::class, 'setLibur'])->name('absensi-umum.libur.set');
+    Route::post('absensi-umum/batal-libur', [DailyAttendanceController::class, 'batalLibur'])->name('absensi-umum.batal-libur');
 
     // Absensi per mata pelajaran (ceklis per JP)
     Route::get('absensi-mapel', [SubjectAttendanceController::class, 'index'])->name('absensi-mapel.index');

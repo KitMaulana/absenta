@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DailyAttendance;
+use App\Models\Holiday;
 use App\Models\Schedule;
 use App\Models\Student;
 use App\Models\Subject;
@@ -226,6 +227,59 @@ class AbsensiMapelTest extends TestCase
                 'keterangan' => 'Demam tinggi',
             ]);
         }
+    }
+
+    public function test_menolak_input_absensi_mapel_pada_hari_libur(): void
+    {
+        $jp1 = $this->jadwal(1);
+        Holiday::create([
+            'tanggal' => $this->senin->toDateString(),
+            'keterangan' => 'Libur Nasional',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->post('/admin/absensi-mapel', [
+                'tanggal' => $this->senin->toDateString(),
+                'schedule_id' => $jp1->id,
+                'status' => [$this->siswa->id => 'hadir'],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('gagal');
+
+        $this->assertDatabaseCount('subject_attendances', 0);
+    }
+
+    public function test_salin_ditolak_pada_hari_libur(): void
+    {
+        $jp1 = $this->jadwal(1);
+        Holiday::create([
+            'tanggal' => $this->senin->toDateString(),
+            'keterangan' => 'Libur Sekolah',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->postJson('/admin/absensi-mapel/salin', [
+                'tanggal' => $this->senin->toDateString(),
+                'schedule_id' => $jp1->id,
+                'dari' => 'umum',
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('pesan', 'Tanggal ini adalah hari libur (Libur Sekolah).');
+    }
+
+    public function test_halaman_absensi_mapel_menampilkan_status_libur(): void
+    {
+        Holiday::create([
+            'tanggal' => $this->senin->toDateString(),
+            'keterangan' => 'Libur Nasional Pilkada',
+        ]);
+
+        $this->actingAs($this->admin)
+            ->get('/admin/absensi-mapel?tanggal='.$this->senin->toDateString())
+            ->assertOk()
+            ->assertSee('Libur Nasional Pilkada', false)
+            ->assertSee('Hari Ini Libur', false)
+            ->assertSee('Absensi Mata Pelajaran Ditiadakan', false);
     }
 }
 

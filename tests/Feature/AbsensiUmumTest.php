@@ -3,7 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\DailyAttendance;
+use App\Models\Holiday;
+use App\Models\Schedule;
 use App\Models\Student;
+use App\Models\Subject;
+use App\Models\SubjectAttendance;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -128,5 +132,85 @@ class AbsensiUmumTest extends TestCase
                 'status' => [$siswa[0]->id => 'bolos'],
             ])
             ->assertSessionHasErrors();
+    }
+
+    public function test_menetapkan_hari_libur_dan_membersihkan_data_presensi(): void
+    {
+        $siswa = $this->siswa(2);
+        $tanggal = now()->toDateString();
+        $ketua = $this->ketua();
+
+        // Buat absensi umum sebelumnya
+        DailyAttendance::create([
+            'student_id' => $siswa[0]->id,
+            'tanggal' => $tanggal,
+            'status' => 'hadir',
+        ]);
+
+        // Buat jadwal dan absensi mapel sebelumnya
+        $mapel = Subject::create(['nama' => 'IPA', 'singkatan' => 'IPA', 'warna' => '#10b981', 'is_active' => true]);
+        $jadwal = Schedule::create(['hari' => 'senin', 'jam_ke' => 1, 'subject_id' => $mapel->id]);
+        SubjectAttendance::create([
+            'student_id' => $siswa[0]->id,
+            'tanggal' => $tanggal,
+            'schedule_id' => $jadwal->id,
+            'status' => 'hadir',
+        ]);
+
+        $this->assertDatabaseCount('daily_attendances', 1);
+        $this->assertDatabaseCount('subject_attendances', 1);
+
+        // Tetapkan sebagai hari libur
+        $this->actingAs($ketua)
+            ->post('/admin/absensi-umum/libur', [
+                'tanggal' => $tanggal,
+                'keterangan' => 'Libur Nasional Maulid',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('sukses');
+
+        // Pastikan tabel holidays mencatat tanggal dan keterangan
+        $this->assertDatabaseHas('holidays', [
+            'tanggal' => $tanggal,
+            'keterangan' => 'Libur Nasional Maulid',
+        ]);
+
+        // Pastikan seluruh absensi pada tanggal tersebut otomatis dibersihkan
+        $this->assertDatabaseCount('daily_attendances', 0);
+        $this->assertDatabaseCount('subject_attendances', 0);
+    }
+
+    public function test_membatalkan_hari_libur(): void
+    {
+        $tanggal = now()->toDateString();
+        Holiday::create(['tanggal' => $tanggal, 'keterangan' => 'Libur Khusus']);
+
+        $this->assertDatabaseCount('holidays', 1);
+
+        $this->actingAs($this->ketua())
+            ->post('/admin/absensi-umum/batal-libur', [
+                'tanggal' => $tanggal,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('sukses');
+
+        $this->assertDatabaseCount('holidays', 0);
+    }
+
+    public function test_menolak_input_absensi_pada_hari_libur(): void
+    {
+        $siswa = $this->siswa(1);
+        $tanggal = now()->toDateString();
+        Holiday::create(['tanggal' => $tanggal, 'keterangan' => 'Libur Sekolah']);
+
+        $this->actingAs($this->ketua())
+            ->post('/admin/absensi-umum', [
+                'tanggal' => $tanggal,
+                'status' => [$siswa[0]->id => 'hadir'],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('gagal');
+
+        $this->assertDatabaseCount('daily_attendances', 0);
     }
 }

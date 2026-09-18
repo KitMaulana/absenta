@@ -145,4 +145,39 @@ class RekapDanLaporanTest extends TestCase
         $this->assertSame(0.0, $ringkasan['persen']);
         $this->assertFalse($ringkasan['sudah_diinput']);
     }
+
+    public function test_hari_libur_tidak_dihitung_dalam_rekap_siswa_dan_alpa(): void
+    {
+        $siswa = Student::create(['no_absen' => 1, 'nama' => 'Budi', 'jenis_kelamin' => 'L']);
+        $tanggal = CarbonImmutable::today()->subDays(2);
+
+        // Siswa tercatat alpa pada tanggal tersebut
+        DailyAttendance::create([
+            'student_id' => $siswa->id,
+            'tanggal' => $tanggal->toDateString(),
+            'status' => 'alpa',
+        ]);
+
+        $rekap = app(RekapService::class);
+
+        // Sebelum ditetapkan libur: terhitung alpa 1
+        $sebelum = $rekap->perSiswa($tanggal, $tanggal)->first();
+        $this->assertSame(1, $sebelum->hitung['alpa']);
+
+        // Ditetapkan sebagai hari libur
+        Holiday::create([
+            'tanggal' => $tanggal->toDateString(),
+            'keterangan' => 'Libur Tanggal Merah',
+        ]);
+
+        // Sesudah ditetapkan libur: alpa di hari libur TIDAK boleh dihitung
+        $sesudah = $rekap->perSiswa($tanggal, $tanggal)->first();
+        $this->assertSame(0, $sesudah->hitung['alpa']);
+        $this->assertSame(0, $sesudah->total);
+
+        // Di ringkasan harian juga berstatus libur dan tidak ada siswa tidak hadir
+        $ringkasan = $rekap->ringkasanHarian($tanggal);
+        $this->assertTrue($ringkasan['is_libur']);
+        $this->assertCount(0, $rekap->tidakHadirPada($tanggal));
+    }
 }

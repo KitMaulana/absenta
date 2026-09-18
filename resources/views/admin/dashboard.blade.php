@@ -60,27 +60,48 @@
     {{-- Status Input & Grafik Tren --}}
     <div class="grid gap-6 lg:grid-cols-3">
         <x-card judul="Status Input Hari Ini">
-            <div class="rounded-xl border p-4 text-xs transition-all {{ $ringkasan['sudah_diinput'] ? 'border-emerald-200 bg-emerald-50/70 text-emerald-900' : 'border-amber-200 bg-amber-50/70 text-amber-900' }}">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        @if ($ringkasan['sudah_diinput'])
-                            <span class="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-white">
-                                <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                            </span>
-                        @else
-                            <span class="grid h-5 w-5 place-items-center rounded-full bg-amber-500 text-white font-bold">!</span>
-                        @endif
-                        <span class="font-bold">Absensi Umum Harian</span>
+            @if ($liburHariIni)
+                <div class="rounded-xl border border-amber-300 bg-amber-100/70 p-4 text-xs text-amber-950 transition-all">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">🏖️</span>
+                            <span class="font-bold">Hari Libur</span>
+                        </div>
+                        <span class="font-bold text-amber-900 truncate max-w-[10rem]" title="{{ $liburHariIni->keterangan }}">{{ $liburHariIni->keterangan }}</span>
                     </div>
-                    <span class="font-semibold">{{ $ringkasan['sudah_diinput'] ? 'Sudah Diinput' : 'Belum Diinput' }}</span>
+                    <p class="mt-2 text-[11px] text-amber-800">
+                        Presensi dinonaktifkan untuk seluruh siswa & mapel.
+                    </p>
+                    <div class="mt-2.5 pt-2 border-t border-amber-200 flex justify-end">
+                        <a href="{{ route('admin.absensi-umum.index') }}" class="inline-flex items-center gap-1 font-bold text-amber-900 hover:text-amber-950 transition">
+                            <span>Buka Absensi Umum</span>
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                        </a>
+                    </div>
                 </div>
-                <div class="mt-2.5 pt-2 border-t border-slate-200/40 flex justify-end">
-                    <a href="{{ route('admin.absensi-umum.index') }}" class="inline-flex items-center gap-1 font-bold text-indigo-700 hover:text-indigo-900 transition">
-                        <span>{{ $ringkasan['sudah_diinput'] ? 'Periksa / Koreksi' : 'Input Sekarang' }}</span>
-                        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
-                    </a>
+            @else
+                <div class="rounded-xl border p-4 text-xs transition-all {{ $ringkasan['sudah_diinput'] ? 'border-emerald-200 bg-emerald-50/70 text-emerald-900' : 'border-amber-200 bg-amber-50/70 text-amber-900' }}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            @if ($ringkasan['sudah_diinput'])
+                                <span class="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-white">
+                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                </span>
+                            @else
+                                <span class="grid h-5 w-5 place-items-center rounded-full bg-amber-500 text-white font-bold">!</span>
+                            @endif
+                            <span class="font-bold">Absensi Umum Harian</span>
+                        </div>
+                        <span class="font-semibold">{{ $ringkasan['sudah_diinput'] ? 'Sudah Diinput' : 'Belum Diinput' }}</span>
+                    </div>
+                    <div class="mt-2.5 pt-2 border-t border-slate-200/40 flex justify-end">
+                        <a href="{{ route('admin.absensi-umum.index') }}" class="inline-flex items-center gap-1 font-bold text-indigo-700 hover:text-indigo-900 transition">
+                            <span>{{ $ringkasan['sudah_diinput'] ? 'Periksa / Koreksi' : 'Input Sekarang' }}</span>
+                            <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                        </a>
+                    </div>
                 </div>
-            </div>
+            @endif
 
             <div class="mt-5">
                 <div class="flex items-center justify-between mb-2">

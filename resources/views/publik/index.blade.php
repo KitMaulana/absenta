@@ -15,7 +15,12 @@
                 </div>
                 <h2 class="text-base font-bold text-slate-900 tracking-tight">Presensi Hari Ini</h2>
             </div>
-            @if ($ringkasan['sudah_diinput'])
+            @if ($liburHariIni)
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 border border-amber-300">
+                    <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    Hari Libur
+                </span>
+            @elseif ($ringkasan['sudah_diinput'])
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200/60">
                     <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                     Sudah Diperbarui
@@ -28,7 +33,25 @@
             @endif
         </div>
 
-        @if (! $ringkasan['sudah_diinput'])
+        @if ($liburHariIni)
+            {{-- Banner Khusus Ketika Hari Ini Ditetapkan Sebagai Hari Libur --}}
+            <div class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-amber-50/70 p-6 sm:p-8 text-amber-950 shadow-xs backdrop-blur">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                    <div class="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-amber-500 text-white text-3xl shadow-md shadow-amber-500/25">
+                        🏖️
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="inline-flex items-center gap-1.5 rounded-full bg-amber-100/90 border border-amber-200 px-3 py-0.5 text-xs font-bold text-amber-900">
+                            <span>Ketetapan Hari Libur</span>
+                        </div>
+                        <h3 class="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">Hari Ini Libur &middot; {{ $liburHariIni->keterangan }}</h3>
+                        <p class="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
+                            Kegiatan belajar mengajar ditiadakan pada hari ini sesuai kalender/ketetapan sekolah atau pemerintah. Seluruh siswa tidak dicatat presensi dan tidak dikenakan status ketidakhadiran (alpa, sakit, maupun izin).
+                        </p>
+                    </div>
+                </div>
+            </div>
+        @elseif (! $ringkasan['sudah_diinput'])
             <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 text-sm text-amber-900 flex items-start gap-3.5 shadow-xs backdrop-blur">
                 <div class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-amber-500 text-white font-bold text-sm shadow-xs">
                     !
@@ -78,8 +101,8 @@
         @endif
     </section>
 
-    {{-- 2. Daftar Siswa Tidak Hadir --}}
-    @if ($tidakHadir->isNotEmpty())
+    {{-- 2. Daftar Siswa Tidak Hadir (Hanya tampil jika bukan hari libur) --}}
+    @if (! $liburHariIni && $tidakHadir->isNotEmpty())
         <section>
             <div class="flex items-center gap-2 mb-3">
                 <div class="grid h-6 w-6 place-items-center rounded-lg bg-rose-50 text-rose-600 border border-rose-200/60">
@@ -203,7 +226,12 @@
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 12h15m-15 0l6-6m-6 6l6 6"/></svg>
                     </a>
                 </div>
-            @else
+                @if ($liburHariIni && $filterRekap === 'hari_ini')
+                    <div class="border-b border-amber-200 bg-amber-50/70 px-5 py-2.5 text-xs text-amber-900 flex items-center gap-2 font-medium">
+                        <svg class="h-4 w-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                        <span>Hari ini berstatus <strong>Hari Libur ({{ $liburHariIni->keterangan }})</strong>. Seluruh siswa dibebaskan dari kegiatan absensi.</span>
+                    </div>
+                @endif
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-slate-100 text-xs">
                         <thead class="bg-slate-50/80 text-left uppercase tracking-wider text-slate-500">
@@ -261,7 +289,11 @@
                                     {{-- Kehadiran Normal --}}
                                     <td class="px-4 py-3">
                                         @if ($filterRekap === 'hari_ini')
-                                            @if ($u && $u->status_hari_ini)
+                                            @if ($liburHariIni)
+                                                <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 border border-amber-300">
+                                                    🏖️ Libur
+                                                </span>
+                                            @elseif ($u && $u->status_hari_ini)
                                                 <div class="space-y-1">
                                                     <x-badge :status="$u->status_hari_ini" />
                                                     @if ($u->keterangan_hari_ini)
@@ -312,7 +344,9 @@
 
                                     {{-- Kehadiran Mapel --}}
                                     <td class="px-4 py-3">
-                                        @if ($m && $m->total > 0)
+                                        @if ($liburHariIni && $filterRekap === 'hari_ini')
+                                            <span class="text-amber-700 font-semibold text-[11px]">Libur (Tidak ada mapel)</span>
+                                        @elseif ($m && $m->total > 0)
                                             <div>
                                                 <div class="flex items-center gap-2">
                                                     <span class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700 border border-indigo-200/60 tabular-nums">

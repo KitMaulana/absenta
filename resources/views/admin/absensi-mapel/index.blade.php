@@ -25,7 +25,11 @@
             </a>
 
             <div class="ml-auto flex items-center gap-2">
-                @if ($umumAda)
+                @if ($libur)
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-300">
+                        🏖️ Libur: {{ $libur->keterangan }}
+                    </span>
+                @elseif ($umumAda)
                     <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200/60">
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
                         Absensi umum hari ini sudah diinput
@@ -41,13 +45,34 @@
 
         @if ($libur)
             <div class="mt-3.5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
-                <svg class="h-4 w-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
-                <span>{{ \App\Support\Tanggal::pendek($tanggal) }} terdaftar sebagai hari libur: <strong>{{ $libur->keterangan }}</strong>.</span>
+                <svg class="h-4 w-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                <span>Tanggal ini terdaftar sebagai hari libur: <strong>{{ $libur->keterangan }}</strong>. Seluruh jam pelajaran otomatis diliburkan.</span>
             </div>
         @endif
     </x-card>
 
-    @if ($sesiMapel->isEmpty())
+    @if ($libur)
+        <x-card padat>
+            <div class="p-8 text-center sm:p-12">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-3xl shadow-xs border border-amber-200">
+                    🏖️
+                </div>
+                <h3 class="mt-4 text-lg font-bold text-slate-900 sm:text-xl">Hari Ini Libur — Absensi Mata Pelajaran Ditiadakan</h3>
+                <div class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-4 py-1 text-xs font-bold text-amber-800">
+                    {{ $libur->keterangan }}
+                </div>
+                <p class="mx-auto mt-3 max-w-lg text-xs text-slate-500 leading-relaxed">
+                    Karena tanggal {{ \App\Support\Tanggal::panjang($tanggal) }} telah ditetapkan sebagai hari libur di Absensi Umum, seluruh jam mata pelajaran pada hari ini otomatis diliburkan dan tidak dapat diinput absensi.
+                </p>
+                <div class="mt-6 flex items-center justify-center gap-3">
+                    <a href="{{ route('admin.absensi-umum.index', ['tanggal' => $tanggal->toDateString()]) }}"
+                       class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-2xs hover:bg-slate-800 transition">
+                        <span>Buka Absensi Umum</span>
+                    </a>
+                </div>
+            </div>
+        </x-card>
+    @elseif ($sesiMapel->isEmpty())
         <x-card>
             <x-kosong pesan="Tidak ada jadwal pelajaran yang tercatat untuk hari {{ $namaHari }}." ikon="🕘">
                 <a href="{{ route('admin.jadwal.index') }}" class="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/25 hover:bg-indigo-700 transition">

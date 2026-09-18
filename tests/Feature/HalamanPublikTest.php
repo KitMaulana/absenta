@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\DailyAttendance;
+use App\Models\Holiday;
 use App\Models\Setting;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -121,5 +122,20 @@ class HalamanPublikTest extends TestCase
             ->assertOk()
             ->assertDontSee('Manajemen Admin', false)
             ->assertDontSee('Input Absensi', false);
+    }
+
+    public function test_halaman_publik_menampilkan_keterangan_libur_saat_hari_ini_libur(): void
+    {
+        Holiday::create([
+            'tanggal' => now()->toDateString(),
+            'keterangan' => 'Libur Nasional Kemerdekaan',
+        ]);
+
+        $response = $this->get('/')->assertOk();
+
+        $response->assertSee('Hari Ini Libur', false);
+        $response->assertSee('Libur Nasional Kemerdekaan', false);
+        $response->assertDontSee('Siswa Tidak Hadir Hari Ini', false);
+        $response->assertSee('Libur', false);
     }
 }

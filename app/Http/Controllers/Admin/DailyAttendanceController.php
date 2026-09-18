@@ -9,6 +9,7 @@ use App\Models\Holiday;
 use App\Models\Schedule;
 use App\Models\Setting;
 use App\Models\Student;
+use App\Models\SubjectAttendance;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,6 +54,13 @@ class DailyAttendanceController extends Controller
         ]);
 
         $tanggal = CarbonImmutable::parse($data['tanggal'])->toDateString();
+
+        if ($libur = Holiday::whereDate('tanggal', $tanggal)->first()) {
+            return redirect()
+                ->route('admin.absensi-umum.index', ['tanggal' => $tanggal])
+                ->with('gagal', "Tanggal {$tanggal} terdaftar sebagai hari libur ({$libur->keterangan}). Presensi tidak dapat disimpan.");
+        }
+
         $idSiswaAktif = Student::aktif()->pluck('id')->flip();
         $userId = $request->user()->id;
         $jumlah = 0;
@@ -80,6 +88,47 @@ class DailyAttendanceController extends Controller
         return redirect()
             ->route('admin.absensi-umum.index', ['tanggal' => $tanggal])
             ->with('sukses', "Absensi umum {$tanggal} tersimpan untuk {$jumlah} siswa.");
+    }
+
+    public function setLibur(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'tanggal' => ['required', 'date'],
+            'keterangan' => ['required', 'string', 'max:150'],
+        ]);
+
+        $tanggal = CarbonImmutable::parse($data['tanggal'])->toDateString();
+        $keterangan = trim($data['keterangan']);
+
+        DB::transaction(function () use ($tanggal, $keterangan) {
+            Holiday::updateOrCreate(
+                ['tanggal' => $tanggal],
+                ['keterangan' => $keterangan]
+            );
+
+            // Bersihkan catatan presensi yang mungkin sempat tersimpan pada tanggal ini
+            DailyAttendance::where('tanggal', $tanggal)->delete();
+            SubjectAttendance::where('tanggal', $tanggal)->delete();
+        });
+
+        return redirect()
+            ->route('admin.absensi-umum.index', ['tanggal' => $tanggal])
+            ->with('sukses', "Tanggal {$tanggal} berhasil ditetapkan sebagai hari libur: {$keterangan}.");
+    }
+
+    public function batalLibur(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'tanggal' => ['required', 'date'],
+        ]);
+
+        $tanggal = CarbonImmutable::parse($data['tanggal'])->toDateString();
+
+        Holiday::whereDate('tanggal', $tanggal)->delete();
+
+        return redirect()
+            ->route('admin.absensi-umum.index', ['tanggal' => $tanggal])
+            ->with('sukses', "Status hari libur untuk tanggal {$tanggal} telah dibatalkan.");
     }
 
     private function tanggalDari(Request $request): CarbonImmutable

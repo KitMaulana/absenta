@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Holiday;
 use App\Models\Student;
 use App\Services\RekapService;
 use Carbon\CarbonImmutable;
@@ -22,6 +23,7 @@ class PublicController extends Controller
     public function index(Request $request): View
     {
         $hariIni = CarbonImmutable::today();
+        $liburHariIni = Holiday::whereDate('tanggal', $hariIni)->first();
         [$mulai, $selesai, $labelPeriode, $pilihan] = $this->periode($request, $hariIni);
 
         // Filter rentang untuk rekap tabel siswa: hari_ini, mingguan, bulanan
@@ -60,15 +62,18 @@ class PublicController extends Controller
             $rawUmum = \Illuminate\Support\Facades\DB::table('daily_attendances')
                 ->whereIn('student_id', $studentIds)
                 ->whereBetween('tanggal', [$rekapMulai->toDateString(), $rekapSelesai->toDateString()])
+                ->whereNotIn('tanggal', \Illuminate\Support\Facades\DB::table('holidays')->whereBetween('tanggal', [$rekapMulai->toDateString(), $rekapSelesai->toDateString()])->select('tanggal'))
                 ->select('student_id', 'status', 'keterangan')
                 ->get();
 
-            // Ambil status presensi hari ini secara spesifik agar selalu akurat
-            $todayUmum = \Illuminate\Support\Facades\DB::table('daily_attendances')
-                ->whereIn('student_id', $studentIds)
-                ->whereDate('tanggal', $hariIni->toDateString())
-                ->get()
-                ->keyBy('student_id');
+            // Ambil status presensi hari ini secara spesifik agar selalu akurat (kosong jika hari libur)
+            $todayUmum = $liburHariIni
+                ? collect()
+                : \Illuminate\Support\Facades\DB::table('daily_attendances')
+                    ->whereIn('student_id', $studentIds)
+                    ->whereDate('tanggal', $hariIni->toDateString())
+                    ->get()
+                    ->keyBy('student_id');
 
             foreach ($studentIds as $sid) {
                 $rows = $rawUmum->where('student_id', $sid);
@@ -98,6 +103,7 @@ class PublicController extends Controller
             $rawMapel = \Illuminate\Support\Facades\DB::table('subject_attendances')
                 ->whereIn('student_id', $studentIds)
                 ->whereBetween('tanggal', [$rekapMulai->toDateString(), $rekapSelesai->toDateString()])
+                ->whereNotIn('tanggal', \Illuminate\Support\Facades\DB::table('holidays')->whereBetween('tanggal', [$rekapMulai->toDateString(), $rekapSelesai->toDateString()])->select('tanggal'))
                 ->select('student_id', 'status')
                 ->get();
 
@@ -117,6 +123,7 @@ class PublicController extends Controller
 
         return view('publik.index', [
             'hariIni' => $hariIni,
+            'liburHariIni' => $liburHariIni,
             'ringkasan' => $this->rekap->ringkasanHarian($hariIni),
             'tidakHadir' => $this->rekap->tidakHadirPada($hariIni),
             'periodeLabel' => $labelPeriode,
