@@ -226,6 +226,7 @@
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.5 12h15m-15 0l6-6m-6 6l6 6"/></svg>
                     </a>
                 </div>
+            @else
                 @if ($liburHariIni && $filterRekap === 'hari_ini')
                     <div class="border-b border-amber-200 bg-amber-50/70 px-5 py-2.5 text-xs text-amber-900 flex items-center gap-2 font-medium">
                         <svg class="h-4 w-4 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>

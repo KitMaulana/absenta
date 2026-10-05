@@ -138,4 +138,30 @@ class HalamanPublikTest extends TestCase
         $response->assertDontSee('Siswa Tidak Hadir Hari Ini', false);
         $response->assertSee('Libur', false);
     }
+
+    public function test_rekapitulasi_siswa_dan_pagination_tampil_pada_halaman_publik_saat_ada_siswa(): void
+    {
+        $response = $this->get('/')->assertOk();
+
+        // Rekapitulasi harus memuat nama siswa dan pagination jika ada siswa
+        $response->assertSee('Rekapitulasi Kehadiran Siswa', false);
+        $response->assertSee('Budi Santoso', false);
+        $response->assertSee('Menampilkan', false);
+        $response->assertDontSee('Tidak ada siswa ditemukan', false);
+    }
+
+    public function test_rekapitulasi_siswa_saat_pencarian_ditemukan_dan_tidak_ditemukan(): void
+    {
+        // Cari nama yang cocok
+        $found = $this->get('/?cari=Budi')->assertOk();
+        $found->assertSee('Budi Santoso', false);
+        $found->assertDontSee('Tidak ada siswa ditemukan', false);
+
+        // Cari nama yang tidak ada
+        $notFound = $this->get('/?cari=NamaTidakAda')->assertOk();
+        $notFound->assertSee('Tidak ada siswa ditemukan', false);
+        $notFound->assertDontSee('Menampilkan', false);
+    }
 }
+
+
