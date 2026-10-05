@@ -20,6 +20,7 @@ class RekapController extends Controller
         'mapel' => 'Rekap per Mata Pelajaran',
         'siswa' => 'Rekap per Siswa',
         'bulanan' => 'Laporan Bulanan Wali Kelas',
+        'semester' => 'Laporan Semester Wali Kelas',
         'infografis' => 'Infografis Versi Cetak',
     ];
 
@@ -63,7 +64,7 @@ class RekapController extends Controller
     /** @return array<string,mixed> */
     private function data(Request $request, string $jenis): array
     {
-        $periode = Periode::dariRequest($request);
+        $periode = Periode::dariRequest($request, $jenis === 'semester' ? 'semester' : 'bulanan');
 
         $dasar = [
             'periode' => $periode,
@@ -78,7 +79,7 @@ class RekapController extends Controller
             ],
             'mapel' => $this->dataMapel($request, $periode),
             'siswa' => $this->dataSiswa($request, $periode),
-            'bulanan' => [
+            'bulanan', 'semester' => [
                 'baris' => $this->rekap->perSiswa($periode->mulai, $periode->selesai),
                 'rawanAlpa' => $this->rekap->siswaRawanAlpa($periode->mulai, $periode->selesai),
                 'perMapel' => $this->rekap->persenPerMapel($periode->mulai, $periode->selesai),

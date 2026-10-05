@@ -34,7 +34,7 @@ class RekapDanLaporanTest extends TestCase
 
     public function test_semua_halaman_rekap_terbuka(): void
     {
-        foreach (['umum', 'mapel', 'siswa', 'bulanan', 'infografis'] as $jenis) {
+        foreach (['umum', 'mapel', 'siswa', 'bulanan', 'semester', 'infografis'] as $jenis) {
             $this->actingAs($this->wali)
                 ->get("/admin/rekap/{$jenis}")
                 ->assertOk();
@@ -52,7 +52,7 @@ class RekapDanLaporanTest extends TestCase
     {
         Student::create(['no_absen' => 1, 'nama' => 'Ani', 'jenis_kelamin' => 'P']);
 
-        foreach (['umum', 'mapel', 'siswa', 'bulanan', 'infografis'] as $jenis) {
+        foreach (['umum', 'mapel', 'siswa', 'bulanan', 'semester', 'infografis'] as $jenis) {
             $response = $this->actingAs($this->wali)->get("/admin/rekap/{$jenis}/pdf");
 
             $response->assertOk();

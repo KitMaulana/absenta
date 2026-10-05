@@ -166,6 +166,7 @@
                         'hari_ini' => 'Hari Ini',
                         'mingguan' => 'Minggu Ini',
                         'bulanan' => 'Bulan Ini',
+                        'semester' => 'Semester Ini',
                     ];
                 @endphp
                 @foreach ($filterTabs as $kode => $labelTab)
@@ -212,6 +213,46 @@
                 </div>
             </div>
 
+            {{-- Quick Stats Bar untuk periode akumulasi (Mingguan / Bulanan / Semester) --}}
+            @if ($filterRekap !== 'hari_ini' && $rekapPeriodeRingkasan && $rekapPeriodeRingkasan['total'] > 0)
+                <div class="border-b border-slate-100 bg-gradient-to-r from-indigo-50/50 via-slate-50 to-white px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center flex-wrap gap-2.5">
+                        <span class="inline-flex items-center gap-1.5 font-bold text-slate-800">
+                            <span class="h-2 w-2 rounded-full {{ $rekapPeriodeRingkasan['persen'] >= 85 ? 'bg-emerald-500' : ($rekapPeriodeRingkasan['persen'] >= 75 ? 'bg-amber-500' : 'bg-rose-500') }}"></span>
+                            Rata-rata Kehadiran Kelas:
+                            <span class="font-black text-sm {{ $rekapPeriodeRingkasan['persen'] >= 85 ? 'text-emerald-700' : ($rekapPeriodeRingkasan['persen'] >= 75 ? 'text-amber-700' : 'text-rose-700') }}">
+                                {{ $rekapPeriodeRingkasan['persen'] }}%
+                            </span>
+                        </span>
+                        @if ($rekapHariEfektifCount)
+                            <span class="text-slate-300 hidden sm:inline">&bull;</span>
+                            <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600 border border-slate-200/70 shadow-2xs">
+                                📅 {{ $rekapHariEfektifCount }} Hari Efektif Sekolah
+                            </span>
+                        @endif
+                    </div>
+                    <div class="flex items-center flex-wrap gap-1.5 text-[11px]">
+                        <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 font-bold text-emerald-700 border border-slate-200/80 shadow-2xs" title="Total Hadir">
+                            H: {{ number_format($rekapPeriodeRingkasan['hadir']) }}
+                        </span>
+                        <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 font-bold text-amber-700 border border-slate-200/80 shadow-2xs" title="Total Sakit">
+                            S: {{ number_format($rekapPeriodeRingkasan['sakit']) }}
+                        </span>
+                        <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 font-bold text-blue-700 border border-slate-200/80 shadow-2xs" title="Total Izin">
+                            I: {{ number_format($rekapPeriodeRingkasan['izin']) }}
+                        </span>
+                        <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 font-bold text-rose-700 border border-slate-200/80 shadow-2xs" title="Total Alpa">
+                            A: {{ number_format($rekapPeriodeRingkasan['alpa']) }}
+                        </span>
+                        @if ($rekapPeriodeRingkasan['dispensasi'] > 0)
+                            <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 font-bold text-violet-700 border border-slate-200/80 shadow-2xs" title="Total Dispensasi">
+                                D: {{ number_format($rekapPeriodeRingkasan['dispensasi']) }}
+                            </span>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             {{-- Table --}}
             @if ($daftarSiswa->isEmpty())
                 <div class="p-8 text-center">
@@ -242,6 +283,8 @@
                                 <th class="px-4 py-3.5 font-bold">
                                     @if ($filterRekap === 'hari_ini')
                                         Kehadiran Normal Hari Ini
+                                    @elseif ($filterRekap === 'semester')
+                                        Kehadiran Normal (Semester Ini)
                                     @else
                                         Kehadiran Normal ({{ $filterRekap === 'mingguan' ? 'Mingguan' : 'Bulanan' }})
                                     @endif
@@ -249,6 +292,8 @@
                                 <th class="px-4 py-3.5 font-bold">
                                     @if ($filterRekap === 'hari_ini')
                                         Kehadiran Mapel Hari Ini
+                                    @elseif ($filterRekap === 'semester')
+                                        Kehadiran Mapel (Semester Ini)
                                     @else
                                         Kehadiran Mapel ({{ $filterRekap === 'mingguan' ? 'Mingguan' : 'Bulanan' }})
                                     @endif
@@ -373,7 +418,7 @@
 
                                     {{-- Aksi --}}
                                     <td class="px-4 py-3 text-right">
-                                        <a href="{{ route('publik.siswa', $s->id) }}"
+                                        <a href="{{ route('publik.siswa', array_filter(['siswa' => $s->id, 'periode' => $filterRekap === 'semester' ? 'semester' : ($filterRekap === 'bulanan' ? 'bulan_ini' : null)])) }}"
                                            class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition group">
                                             <span>Profil</span>
                                             <svg class="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">

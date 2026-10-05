@@ -26,8 +26,12 @@ class PublicController extends Controller
         $liburHariIni = Holiday::whereDate('tanggal', $hariIni)->first();
         [$mulai, $selesai, $labelPeriode, $pilihan] = $this->periode($request, $hariIni);
 
-        // Filter rentang untuk rekap tabel siswa: hari_ini, mingguan, bulanan
+        // Filter rentang untuk rekap tabel siswa: hari_ini, mingguan, bulanan, semester
         $filterRekap = $request->input('filter_rekap', 'hari_ini');
+        $namaSemester = $hariIni->month >= 7 ? 'Semester Ganjil' : 'Semester Genap';
+        $semesterMulai = $hariIni->month >= 7 ? $hariIni->setDate($hariIni->year, 7, 1) : $hariIni->setDate($hariIni->year, 1, 1);
+        $semesterSelesai = $hariIni->month >= 7 ? $hariIni->setDate($hariIni->year, 12, 31) : $hariIni->setDate($hariIni->year, 6, 30);
+
         [$rekapMulai, $rekapSelesai, $rekapFilterLabel] = match ($filterRekap) {
             'mingguan' => [
                 $hariIni->startOfWeek(),
@@ -39,12 +43,24 @@ class PublicController extends Controller
                 $hariIni->endOfMonth(),
                 'Bulan Ini ('.\App\Support\Tanggal::bulanTahun($hariIni).')',
             ],
+            'semester' => [
+                $semesterMulai,
+                $semesterSelesai,
+                'Semester Ini ('.$namaSemester.' '.$hariIni->year.')',
+            ],
             default => [
                 $hariIni,
                 $hariIni,
                 'Hari Ini ('.\App\Support\Tanggal::panjang($hariIni).')',
             ],
         };
+
+        $rekapPeriodeRingkasan = $filterRekap !== 'hari_ini'
+            ? $this->rekap->ringkasanPeriode($rekapMulai, $rekapSelesai)
+            : null;
+        $rekapHariEfektifCount = $filterRekap !== 'hari_ini'
+            ? count($this->rekap->hariEfektif($rekapMulai, $rekapSelesai))
+            : null;
 
         // Paginasi siswa per 10 orang dengan pencarian opsional
         $cariSiswa = trim((string) $request->input('cari'));
@@ -136,6 +152,8 @@ class PublicController extends Controller
             'rekapMapelSiswa' => $rekapMapelSiswa,
             'filterRekap' => $filterRekap,
             'rekapFilterLabel' => $rekapFilterLabel,
+            'rekapPeriodeRingkasan' => $rekapPeriodeRingkasan,
+            'rekapHariEfektifCount' => $rekapHariEfektifCount,
             'cariSiswa' => $cariSiswa,
         ]);
     }
@@ -216,7 +234,8 @@ class PublicController extends Controller
      */
     private function periode(Request $request, CarbonImmutable $hariIni): array
     {
-        $pilihan = $request->input('periode', 'bulan_ini');
+        $defaultPeriode = $request->input('filter_rekap') === 'semester' ? 'semester' : 'bulan_ini';
+        $pilihan = $request->input('periode', $defaultPeriode);
 
         return match ($pilihan) {
             'bulan_lalu' => [

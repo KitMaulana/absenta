@@ -162,6 +162,17 @@ class HalamanPublikTest extends TestCase
         $notFound->assertSee('Tidak ada siswa ditemukan', false);
         $notFound->assertDontSee('Menampilkan', false);
     }
+
+    public function test_rekapitulasi_siswa_filter_semester_ini_tampil_dengan_benar(): void
+    {
+        $response = $this->get('/?filter_rekap=semester')->assertOk();
+
+        $response->assertSee('Semester Ini', false);
+        $response->assertSee('Kehadiran Normal (Semester Ini)', false);
+        $response->assertSee('Kehadiran Mapel (Semester Ini)', false);
+        $response->assertSee('Budi Santoso', false);
+    }
 }
+
 
 

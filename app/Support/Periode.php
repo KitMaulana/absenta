@@ -82,6 +82,11 @@ class Periode
             return Tanggal::bulanTahun($this->mulai);
         }
 
+        if ($this->jenis === 'semester') {
+            $namaSemester = $this->mulai->month >= 7 ? 'Semester Ganjil' : 'Semester Genap';
+            return "{$namaSemester} (" . Tanggal::bulanTahun($this->mulai) . ' – ' . Tanggal::bulanTahun($this->selesai) . ')';
+        }
+
         return Tanggal::pendek($this->mulai).' – '.Tanggal::pendek($this->selesai);
     }
 
