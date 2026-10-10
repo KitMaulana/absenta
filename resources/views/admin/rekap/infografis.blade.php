@@ -24,12 +24,29 @@
 </div>
 
 <div id="lembar-cetak" class="mt-5 space-y-6">
-    <header class="rounded-2xl border border-slate-200/80 bg-white p-6 text-center shadow-xs">
-        <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">Infografis Kehadiran Kelas {{ $pengaturan['nama_kelas'] }}</h2>
-        <p class="text-sm font-semibold text-indigo-600 mt-0.5">{{ $pengaturan['nama_sekolah'] }}</p>
-        <p class="mt-1.5 text-xs text-slate-500">
-            {{ $periode->label() }} &middot; T.A. {{ $pengaturan['tahun_ajaran'] }} (Semester {{ $pengaturan['semester'] }}) &middot; {{ $jumlahHariEfektif }} Hari Efektif
-        </p>
+    <header class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-5">
+        <div class="flex items-center gap-4 text-left">
+            @php
+                $logoApp = (!empty($pengaturan['logo']) && file_exists(public_path('storage/'.$pengaturan['logo'])))
+                    ? asset('storage/'.$pengaturan['logo'])
+                    : (file_exists(public_path('logo-smancir.png')) ? asset('logo-smancir.png') : asset('favicon.png'));
+            @endphp
+            <div class="h-16 w-16 shrink-0 rounded-2xl bg-white p-1.5 border border-slate-200 shadow-xs flex items-center justify-center">
+                <img src="{{ $logoApp }}" alt="Logo SMAN 1 Ciruas" class="h-full w-full object-contain">
+            </div>
+            <div>
+                <h2 class="text-xl font-black text-slate-900 tracking-tight">Infografis Kehadiran Kelas {{ $pengaturan['nama_kelas'] }}</h2>
+                <p class="text-sm font-bold text-indigo-600 mt-0.5">{{ $pengaturan['nama_sekolah'] }}</p>
+                <p class="mt-1 text-xs text-slate-500">
+                    {{ $periode->label() }} &middot; T.A. {{ $pengaturan['tahun_ajaran'] }} (Semester {{ $pengaturan['semester'] }}) &middot; {{ $jumlahHariEfektif }} Hari Efektif
+                </p>
+            </div>
+        </div>
+        <div class="text-right hidden sm:block text-xs text-slate-500">
+            <span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-1.5 font-bold text-slate-700 border border-slate-200/80 shadow-2xs">
+                Wali Kelas: {{ $pengaturan['nama_wali_kelas'] }}
+            </span>
+        </div>
     </header>
 
     <div class="grid gap-4 sm:grid-cols-3 xl:grid-cols-6">

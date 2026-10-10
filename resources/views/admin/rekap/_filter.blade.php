@@ -1,9 +1,10 @@
 {{-- Filter periode bersama untuk semua jenis rekap. $ekstra menampung field khusus (pilih mapel / pilih siswa). --}}
-<x-card class="mb-5">
+<x-card class="mb-5 print:hidden">
     <form method="GET" x-data="{ jenis: '{{ $periode->jenis }}' }" class="flex flex-wrap items-end gap-3">
         <div>
             <label for="periode" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Pilih Periode</label>
             <select id="periode" name="periode" x-model="jenis"
+                    onchange="if(this.value === 'bulanan' || this.value === 'semester') this.form.submit()"
                     class="rounded-xl border-slate-200 text-xs font-semibold shadow-2xs focus:border-indigo-500 focus:ring-indigo-500">
                 @foreach (\App\Support\Periode::PILIHAN as $kode => $label)
                     <option value="{{ $kode }}" @selected($periode->jenis === $kode)>{{ $label }}</option>
@@ -11,7 +12,34 @@
             </select>
         </div>
 
-        <div x-show="jenis !== 'custom'">
+        {{-- Jika periode bulanan, tampilkan pemilih Bulan & Tahun langsung --}}
+        <div x-show="jenis === 'bulanan'">
+            <label for="bulan_tahun" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Pilih Bulan &amp; Tahun</label>
+            <div class="flex items-center gap-1.5">
+                <select id="bulan_tahun" name="bulan_tahun" onchange="this.form.submit()"
+                        class="rounded-xl border-slate-200 text-xs font-semibold text-slate-800 shadow-2xs focus:border-indigo-500 focus:ring-indigo-500 bg-white">
+                    @foreach ($daftarBulan ?? \App\Support\Periode::daftarBulan() as $b)
+                        <option value="{{ $b['kode'] }}" @selected($periode->mulai->format('Y-m') === $b['kode'])>
+                            {{ $b['label'] }} @if ($b['has_data']) • Ada Data @endif @if ($b['bulan'] == now()->month && $b['tahun'] == now()->year) (Bulan Ini) @endif
+                        </option>
+                    @endforeach
+                </select>
+
+                {{-- Navigasi Cepat Bulan Sebelumnya & Berikutnya --}}
+                <a href="{{ route('admin.rekap', array_merge([$jenis], ['periode' => 'bulanan', 'bulan' => $periode->bulanSebelumnya()->month, 'tahun' => $periode->bulanSebelumnya()->year], request()->only(['mapel', 'siswa']))) }}"
+                   class="inline-grid h-8 w-8 place-items-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                   title="Bulan Sebelumnya">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </a>
+                <a href="{{ route('admin.rekap', array_merge([$jenis], ['periode' => 'bulanan', 'bulan' => $periode->bulanBerikutnya()->month, 'tahun' => $periode->bulanBerikutnya()->year], request()->only(['mapel', 'siswa']))) }}"
+                   class="inline-grid h-8 w-8 place-items-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                   title="Bulan Berikutnya">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </a>
+            </div>
+        </div>
+
+        <div x-show="jenis !== 'custom' && jenis !== 'bulanan'" x-cloak>
             <label for="acuan" class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Tanggal Acuan</label>
             <input id="acuan" name="acuan" type="date" value="{{ $periode->mulai->toDateString() }}"
                    class="rounded-xl border-slate-200 text-xs shadow-2xs focus:border-indigo-500 focus:ring-indigo-500">

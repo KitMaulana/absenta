@@ -6,18 +6,15 @@
 @endphp
 
 {{-- Brand Header --}}
+@php
+    $logoApp = (!empty($pengaturan['logo']) && file_exists(public_path('storage/'.$pengaturan['logo'])))
+        ? asset('storage/'.$pengaturan['logo'])
+        : (file_exists(public_path('logo-smancir.png')) ? asset('logo-smancir.png') : asset('favicon.png'));
+@endphp
 <div class="flex h-16 shrink-0 items-center gap-3 border-b border-slate-800/80 px-5 bg-slate-950/40">
-    @if (!empty($pengaturan['logo']) && file_exists(public_path('storage/'.$pengaturan['logo'])))
-        <div class="h-9 w-9 rounded-xl bg-white p-1 shadow-sm ring-1 ring-white/20 shrink-0">
-            <img src="{{ asset('storage/'.$pengaturan['logo']) }}" alt="Logo" class="h-full w-full object-contain">
-        </div>
-    @else
-        <div class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shadow-md shadow-indigo-600/30 shrink-0">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-        </div>
-    @endif
+    <div class="h-10 w-10 rounded-xl bg-white p-1 shadow-sm ring-1 ring-white/20 shrink-0 flex items-center justify-center">
+        <img src="{{ $logoApp }}" alt="Logo SMAN 1 Ciruas" class="h-full w-full object-contain">
+    </div>
     <div class="min-w-0 flex-1">
         <p class="truncate text-sm font-bold text-white tracking-tight">{{ $pengaturan['nama_kelas'] }}</p>
         <p class="truncate text-[11px] font-medium text-slate-400">T.A. {{ $pengaturan['tahun_ajaran'] }} &middot; {{ $pengaturan['semester'] }}</p>

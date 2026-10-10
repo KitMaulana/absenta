@@ -30,15 +30,24 @@
                 </div>
             </div>
 
-            {{-- Period Filter Tabs --}}
-            <div class="inline-flex rounded-xl bg-slate-100/80 p-1 border border-slate-200/60 self-start sm:self-auto">
-                @foreach (['bulan_ini' => 'Bulan Ini', 'bulan_lalu' => 'Bulan Lalu', 'semester' => 'Semester'] as $kode => $label)
-                    <a href="{{ route('publik.siswa', ['siswa' => $siswa, 'periode' => $kode]) }}"
-                       class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all
-                              {{ $periodePilihan === $kode ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900' }}">
-                        {{ $label }}
-                    </a>
-                @endforeach
+            {{-- Period Filter Tabs & Month Selector --}}
+            <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                <div class="inline-flex items-center gap-1.5 rounded-xl bg-white p-1 border border-slate-200/80 shadow-2xs">
+                    <span class="pl-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Bulan:</span>
+                    <select onchange="window.location.href=this.value"
+                            class="rounded-lg border-0 py-1.5 pl-2.5 pr-8 text-xs font-bold text-indigo-700 bg-indigo-50/70 focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                        @foreach ($daftarBulan as $b)
+                            <option value="{{ route('publik.siswa', ['siswa' => $siswa, 'periode' => 'bulanan', 'bulan' => $b['bulan'], 'tahun' => $b['tahun']]) }}"
+                                @selected($periodePilihan === 'bulanan' && $selectedBulan == $b['bulan'] && $selectedTahun == $b['tahun'])>
+                                {{ $b['label'] }} @if ($b['has_data']) • Ada Data @endif
+                            </option>
+                        @endforeach
+                        <option value="{{ route('publik.siswa', ['siswa' => $siswa, 'periode' => 'semester']) }}"
+                            @selected($periodePilihan === 'semester')>
+                            Semester Ini
+                        </option>
+                    </select>
+                </div>
             </div>
         </div>
     </section>

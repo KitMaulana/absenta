@@ -3,8 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    @php
+        $logoApp = (!empty($pengaturan['logo']) && file_exists(public_path('storage/'.$pengaturan['logo'])))
+            ? asset('storage/'.$pengaturan['logo'])
+            : (file_exists(public_path('logo-smancir.png')) ? asset('logo-smancir.png') : asset('favicon.png'));
+    @endphp
     <title>Masuk Admin &middot; {{ $pengaturan['nama_kelas'] }}</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗓️</text></svg>">
+    <link rel="icon" type="image/png" href="{{ $logoApp }}">
+    <link rel="apple-touch-icon" href="{{ $logoApp }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,17 +38,9 @@
     <div class="relative w-full max-w-md">
         {{-- Brand / School Header --}}
         <div class="mb-8 text-center">
-            @if (!empty($pengaturan['logo']) && file_exists(public_path('storage/'.$pengaturan['logo'])))
-                <div class="mx-auto h-16 w-16 rounded-2xl bg-white p-1.5 shadow-xl ring-2 ring-white/20">
-                    <img src="{{ asset('storage/'.$pengaturan['logo']) }}" alt="Logo" class="h-full w-full object-contain">
-                </div>
-            @else
-                <div class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 text-white shadow-xl shadow-indigo-600/30 ring-2 ring-white/10">
-                    <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
-                    </svg>
-                </div>
-            @endif
+            <div class="mx-auto h-20 w-20 rounded-2xl bg-white p-2 shadow-2xl ring-4 ring-white/20 flex items-center justify-center backdrop-blur">
+                <img src="{{ $logoApp }}" alt="Logo SMAN 1 Ciruas" class="h-full w-full object-contain">
+            </div>
             <h1 class="mt-4 text-2xl font-black tracking-tight text-white">Portal Admin Presensi</h1>
             <p class="mt-1 text-sm text-slate-400">Kelas {{ $pengaturan['nama_kelas'] }} @if ($pengaturan['nama_sekolah']) &middot; {{ $pengaturan['nama_sekolah'] }} @endif</p>
         </div>

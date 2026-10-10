@@ -148,14 +148,14 @@
         {{-- Section Header & Filter Controls --}}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-2.5">
-                <div class="grid h-8 w-8 place-items-center rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200/60 shadow-2xs shrink-0">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <div class="grid h-9 w-9 place-items-center rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200/60 shadow-2xs shrink-0">
+                    <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                     </svg>
                 </div>
                 <div>
-                    <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Rekapitulasi Kehadiran Siswa</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">Status presensi normal & mata pelajaran &middot; <span class="font-semibold text-indigo-600">{{ $rekapFilterLabel }}</span></p>
+                    <h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">Rekapitulasi Kehadiran Siswa</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Status presensi normal & mata pelajaran &middot; <span class="font-bold text-indigo-600">{{ $rekapFilterLabel }}</span></p>
                 </div>
             </div>
 
@@ -165,14 +165,17 @@
                     $filterTabs = [
                         'hari_ini' => 'Hari Ini',
                         'mingguan' => 'Minggu Ini',
-                        'bulanan' => 'Bulan Ini',
+                        'bulanan' => 'Pilih Bulan',
                         'semester' => 'Semester Ini',
                     ];
                 @endphp
                 @foreach ($filterTabs as $kode => $labelTab)
                     <a href="{{ request()->fullUrlWithQuery(['filter_rekap' => $kode, 'page' => 1]) }}#rekap-siswa"
                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all
-                              {{ $filterRekap === $kode ? 'bg-white text-indigo-600 font-bold shadow-2xs' : 'text-slate-600 hover:text-slate-900' }}">
+                              {{ $filterRekap === $kode ? 'bg-white text-indigo-600 font-bold shadow-2xs ring-1 ring-slate-900/5' : 'text-slate-600 hover:text-slate-900' }}">
+                        @if ($kode === 'bulanan')
+                            <svg class="h-3.5 w-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        @endif
                         <span>{{ $labelTab }}</span>
                     </a>
                 @endforeach
@@ -181,10 +184,60 @@
 
         {{-- Container Card: Filter, Table & Pagination --}}
         <div class="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
+            {{-- Toolbar Khusus Filter Bulanan --}}
+            @if ($filterRekap === 'bulanan')
+                <div class="border-b border-indigo-100 bg-gradient-to-r from-indigo-50/70 via-white to-slate-50 p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <div class="grid h-8 w-8 place-items-center rounded-xl bg-indigo-600 text-white shadow-xs shrink-0">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-900">Pilih Bulan Rekapitulasi</p>
+                                <p class="text-[11px] text-slate-500">Tampilkan data presensi seluruh siswa untuk bulan terpilih</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            {{-- Dropdown Bulan --}}
+                            <div class="relative">
+                                <select onchange="window.location.href=this.value"
+                                        class="rounded-xl border-slate-200 text-xs font-bold text-indigo-900 bg-white py-1.5 pl-3 pr-8 shadow-2xs focus:border-indigo-500 focus:ring-indigo-500 cursor-pointer">
+                                    @foreach ($daftarBulan as $b)
+                                        <option value="{{ request()->fullUrlWithQuery(['filter_rekap' => 'bulanan', 'bulan' => $b['bulan'], 'tahun' => $b['tahun'], 'page' => 1]) }}#rekap-siswa"
+                                                @selected($selectedBulan == $b['bulan'] && $selectedTahun == $b['tahun'])>
+                                            {{ $b['label'] }} @if ($b['has_data']) • Ada Data @endif @if ($b['bulan'] == now()->month && $b['tahun'] == now()->year) (Bulan Ini) @endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Tombol Navigasi Cepat Prev / Next Month --}}
+                            @php
+                                $prevBulan = $bulanTerpilihDate->subMonthNoOverflow();
+                                $nextBulan = $bulanTerpilihDate->addMonthNoOverflow();
+                            @endphp
+                            <a href="{{ request()->fullUrlWithQuery(['filter_rekap' => 'bulanan', 'bulan' => $prevBulan->month, 'tahun' => $prevBulan->year, 'page' => 1]) }}#rekap-siswa"
+                               class="inline-grid h-8 w-8 place-items-center rounded-xl bg-white border border-slate-200 text-slate-600 shadow-2xs hover:bg-indigo-50 hover:text-indigo-600 transition"
+                               title="Bulan Sebelumnya ({{ \App\Support\Tanggal::bulanTahun($prevBulan) }})">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                            </a>
+                            <a href="{{ request()->fullUrlWithQuery(['filter_rekap' => 'bulanan', 'bulan' => $nextBulan->month, 'tahun' => $nextBulan->year, 'page' => 1]) }}#rekap-siswa"
+                               class="inline-grid h-8 w-8 place-items-center rounded-xl bg-white border border-slate-200 text-slate-600 shadow-2xs hover:bg-indigo-50 hover:text-indigo-600 transition"
+                               title="Bulan Berikutnya ({{ \App\Support\Tanggal::bulanTahun($nextBulan) }})">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             {{-- Search & Quick Stats Toolbar --}}
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/50 p-4">
                 <form method="GET" action="{{ route('publik.index') }}#rekap-siswa" class="relative w-full sm:max-w-xs">
                     <input type="hidden" name="filter_rekap" value="{{ $filterRekap }}">
+                    <input type="hidden" name="bulan" value="{{ $selectedBulan }}">
+                    <input type="hidden" name="tahun" value="{{ $selectedTahun }}">
                     <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                         <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
@@ -418,7 +471,7 @@
 
                                     {{-- Aksi --}}
                                     <td class="px-4 py-3 text-right">
-                                        <a href="{{ route('publik.siswa', array_filter(['siswa' => $s->id, 'periode' => $filterRekap === 'semester' ? 'semester' : ($filterRekap === 'bulanan' ? 'bulan_ini' : null)])) }}"
+                                        <a href="{{ route('publik.siswa', array_filter(['siswa' => $s->id, 'bulan' => $selectedBulan, 'tahun' => $selectedTahun, 'periode' => $filterRekap === 'semester' ? 'semester' : null])) }}"
                                            class="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition group">
                                             <span>Profil</span>
                                             <svg class="h-3.5 w-3.5 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -445,24 +498,37 @@
         </div>
     </section>
 
-    {{-- 4. Pemilih Periode & Grafik --}}
-    <section>
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div class="flex items-center gap-2">
-                <div class="grid h-6 w-6 place-items-center rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200/60">
-                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+    {{-- 4. Pemilih Periode & Grafik Rekap --}}
+    <section id="grafik-section" class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-2.5">
+                <div class="grid h-9 w-9 place-items-center rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200/60 shadow-2xs shrink-0">
+                    <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
                 </div>
-                <h2 class="text-base font-bold text-slate-900 tracking-tight">Grafik Rekap &middot; {{ $periodeLabel }}</h2>
+                <div>
+                    <h2 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">Grafik Rekap Kehadiran</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Analisis visual komposisi, mata pelajaran, dan tren harian &middot; <span class="font-bold text-indigo-600">{{ $periodeLabel }}</span></p>
+                </div>
             </div>
 
-            <div class="inline-flex rounded-xl bg-white p-1 border border-slate-200/80 shadow-2xs">
-                @foreach (['bulan_ini' => 'Bulan Ini', 'bulan_lalu' => 'Bulan Lalu', 'semester' => 'Semester'] as $kode => $label)
-                    <a href="{{ route('publik.index', ['periode' => $kode]) }}"
-                       class="rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all
-                              {{ $periodePilihan === $kode ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50' }}">
-                        {{ $label }}
-                    </a>
-                @endforeach
+            <div class="flex flex-wrap items-center gap-2">
+                {{-- Pemilih Bulan untuk Grafik --}}
+                <div class="inline-flex items-center gap-2 rounded-xl bg-white p-1 border border-slate-200/80 shadow-2xs">
+                    <span class="pl-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">Bulan:</span>
+                    <select onchange="window.location.href=this.value"
+                            class="rounded-lg border-0 py-1.5 pl-2.5 pr-8 text-xs font-bold text-indigo-700 bg-indigo-50/70 focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                        @foreach ($daftarBulan as $b)
+                            <option value="{{ request()->fullUrlWithQuery(['periode' => 'bulanan', 'bulan' => $b['bulan'], 'tahun' => $b['tahun'], 'filter_rekap' => $filterRekap]) }}#grafik-section"
+                                @selected($periodePilihan === 'bulanan' && $selectedBulan == $b['bulan'] && $selectedTahun == $b['tahun'])>
+                                {{ $b['label'] }} @if ($b['has_data']) • Ada Data @endif @if ($b['bulan'] == now()->month && $b['tahun'] == now()->year) (Bulan Ini) @endif
+                            </option>
+                        @endforeach
+                        <option value="{{ request()->fullUrlWithQuery(['periode' => 'semester', 'filter_rekap' => $filterRekap]) }}#grafik-section"
+                            @selected($periodePilihan === 'semester')>
+                            Semester Ini
+                        </option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -474,7 +540,7 @@
                     <span class="text-xs font-semibold text-slate-400">{{ $periodeLabel }}</span>
                 </div>
                 @if ($komposisi['total'] === 0)
-                    <x-kosong pesan="Belum ada catatan presensi pada periode ini." ikon="📊" />
+                    <x-kosong pesan="Belum ada catatan presensi pada periode {{ $periodeLabel }}." ikon="📊" />
                 @else
                     <div class="relative mt-3 h-64">
                         <canvas id="grafikDonut"></canvas>
@@ -493,30 +559,36 @@
                     <span class="text-xs font-semibold text-slate-400">{{ $periodeLabel }}</span>
                 </div>
                 @if ($perMapel->isEmpty())
-                    <x-kosong pesan="Belum ada data absensi mata pelajaran." ikon="📚" />
+                    <x-kosong pesan="Belum ada data absensi mata pelajaran pada {{ $periodeLabel }}." ikon="📚" />
                 @else
                     <div class="relative mt-3 h-64">
                         <canvas id="grafikMapel"></canvas>
                     </div>
                     <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400">
-                        *Persentase dihitung dari jam pelajaran yang telah terlaksana.
+                        *Persentase dihitung dari jam pelajaran yang telah terlaksana pada {{ $periodeLabel }}.
                     </div>
                 @endif
             </div>
         </div>
 
-        {{-- Grafik Tren Garis 30 Hari --}}
-        <div class="mt-5 rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs">
-            <div class="flex items-center justify-between mb-2">
+        {{-- Grafik Tren Garis --}}
+        <div class="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                 <div>
                     <h3 class="text-sm font-bold text-slate-900">Tren Kehadiran Harian</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">30 hari kalender terakhir</p>
+                    <p class="text-xs text-slate-400 mt-0.5">Persentase kehadiran pada setiap hari sekolah aktif ({{ $periodeLabel }})</p>
                 </div>
+                @if (!empty($tren['labels']))
+                    <span class="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 border border-indigo-200/60 self-start sm:self-auto shadow-2xs">
+                        <span class="h-1.5 w-1.5 rounded-full bg-indigo-500"></span>
+                        {{ count($tren['labels']) }} Hari Efektif Tercatat
+                    </span>
+                @endif
             </div>
             @if (empty($tren['labels']))
-                <x-kosong pesan="Belum ada data historis untuk digambar." ikon="📉" />
+                <x-kosong pesan="Belum ada data absensi harian pada periode {{ $periodeLabel }}." ikon="📉" />
             @else
-                <div class="relative mt-3 h-64">
+                <div class="relative mt-3 h-64 sm:h-72">
                     <canvas id="grafikTren"></canvas>
                 </div>
             @endif
@@ -589,6 +661,9 @@ new Chart(document.getElementById('grafikDonut'), {
 @endif
 
 @if (! $perMapel->isEmpty())
+@php
+    $mapelFullNames = $perMapel->pluck('nama')->all();
+@endphp
 new Chart(document.getElementById('grafikMapel'), {
     type: 'bar',
     data: {
@@ -597,7 +672,7 @@ new Chart(document.getElementById('grafikMapel'), {
             label: '% Kehadiran',
             data: @json($perMapel->pluck('persen')),
             backgroundColor: @json($perMapel->pluck('warna')),
-            borderRadius: 6,
+            borderRadius: 8,
             borderSkipped: false,
         }],
     },
@@ -616,16 +691,23 @@ new Chart(document.getElementById('grafikMapel'), {
             },
             x: {
                 grid: { display: false },
-                ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 10, weight: '600' } }
+                ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '700' } }
             }
         },
         plugins: {
             legend: { display: false },
             tooltip: {
                 backgroundColor: '#0f172a',
-                padding: 10,
-                cornerRadius: 8,
-                callbacks: { label: c => ` ${c.parsed.y}% hadir` }
+                padding: 12,
+                cornerRadius: 10,
+                callbacks: {
+                    title: c => {
+                        const idx = c[0].dataIndex;
+                        const fullNames = @json($mapelFullNames);
+                        return fullNames[idx] || c[0].label;
+                    },
+                    label: c => ` ${c.parsed.y}% kehadiran siswa`
+                }
             },
         },
     },

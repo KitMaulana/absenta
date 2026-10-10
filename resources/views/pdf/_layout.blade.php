@@ -67,9 +67,16 @@
 
 <table class="kop">
     <tr>
-        @php $logo = $pengaturan['logo'] ?? ''; @endphp
-        @if ($logo && file_exists(storage_path('app/public/'.$logo)))
-            <td class="logo"><img src="{{ storage_path('app/public/'.$logo) }}" alt=""></td>
+        @php
+            $logoPath = null;
+            if (!empty($pengaturan['logo']) && file_exists(storage_path('app/public/'.$pengaturan['logo']))) {
+                $logoPath = storage_path('app/public/'.$pengaturan['logo']);
+            } elseif (file_exists(public_path('logo-smancir.png'))) {
+                $logoPath = public_path('logo-smancir.png');
+            }
+        @endphp
+        @if ($logoPath)
+            <td class="logo"><img src="{{ $logoPath }}" alt=""></td>
         @endif
         <td>
             <div class="sekolah">{{ $pengaturan['nama_sekolah'] ?: 'Laporan Absensi Kelas' }}</div>

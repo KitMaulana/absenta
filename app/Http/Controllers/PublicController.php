@@ -24,7 +24,46 @@ class PublicController extends Controller
     {
         $hariIni = CarbonImmutable::today();
         $liburHariIni = Holiday::whereDate('tanggal', $hariIni)->first();
-        [$mulai, $selesai, $labelPeriode, $pilihan] = $this->periode($request, $hariIni);
+
+        // Resolusi bulan & tahun yang dipilih
+        $daftarBulan = \App\Support\Periode::daftarBulan();
+        $selectedBulan = (int) $request->input('bulan', 0);
+        $selectedTahun = (int) $request->input('tahun', 0);
+
+        if ($request->filled('bulan_tahun')) {
+            try {
+                $bt = CarbonImmutable::parse($request->input('bulan_tahun').'-01');
+                $selectedBulan = $bt->month;
+                $selectedTahun = $bt->year;
+            } catch (\Throwable) {}
+        }
+
+        if ($selectedBulan < 1 || $selectedBulan > 12 || $selectedTahun < 2020 || $selectedTahun > 2035) {
+            // Periksa apakah bulan berjalan memiliki data di DB
+            $adaBulanIni = \Illuminate\Support\Facades\DB::table('daily_attendances')
+                ->whereBetween('tanggal', [$hariIni->startOfMonth()->toDateString(), $hariIni->endOfMonth()->toDateString()])
+                ->exists();
+
+            if (! $adaBulanIni) {
+                $maxTanggal = \Illuminate\Support\Facades\DB::table('daily_attendances')->max('tanggal');
+                if ($maxTanggal) {
+                    $maxD = CarbonImmutable::parse($maxTanggal);
+                    $selectedBulan = $maxD->month;
+                    $selectedTahun = $maxD->year;
+                } else {
+                    $selectedBulan = $hariIni->month;
+                    $selectedTahun = $hariIni->year;
+                }
+            } else {
+                $selectedBulan = $hariIni->month;
+                $selectedTahun = $hariIni->year;
+            }
+        }
+
+        $bulanTerpilihDate = CarbonImmutable::createFromDate($selectedTahun, $selectedBulan, 1)->startOfDay();
+
+        // Periode untuk grafik (default mengikuti bulan terpilih)
+        [$mulaiGrafik, $selesaiGrafik, $labelGrafik, $pilihanGrafik] = $this->periode($request, $hariIni, $bulanTerpilihDate);
 
         // Filter rentang untuk rekap tabel siswa: hari_ini, mingguan, bulanan, semester
         $filterRekap = $request->input('filter_rekap', 'hari_ini');
@@ -39,9 +78,9 @@ class PublicController extends Controller
                 'Minggu Ini ('.\App\Support\Tanggal::pendek($hariIni->startOfWeek()).' - '.\App\Support\Tanggal::pendek($hariIni->endOfWeek()).')',
             ],
             'bulanan' => [
-                $hariIni->startOfMonth(),
-                $hariIni->endOfMonth(),
-                'Bulan Ini ('.\App\Support\Tanggal::bulanTahun($hariIni).')',
+                $bulanTerpilihDate->startOfMonth(),
+                $bulanTerpilihDate->endOfMonth(),
+                'Bulan '.\App\Support\Tanggal::bulanTahun($bulanTerpilihDate),
             ],
             'semester' => [
                 $semesterMulai,
@@ -142,11 +181,11 @@ class PublicController extends Controller
             'liburHariIni' => $liburHariIni,
             'ringkasan' => $this->rekap->ringkasanHarian($hariIni),
             'tidakHadir' => $this->rekap->tidakHadirPada($hariIni),
-            'periodeLabel' => $labelPeriode,
-            'periodePilihan' => $pilihan,
-            'komposisi' => $this->rekap->ringkasanPeriode($mulai, $selesai),
-            'tren' => $this->rekap->trenHarian($hariIni->subDays(29), $hariIni),
-            'perMapel' => $this->rekap->persenPerMapel($mulai, $selesai),
+            'periodeLabel' => $labelGrafik,
+            'periodePilihan' => $pilihanGrafik,
+            'komposisi' => $this->rekap->ringkasanPeriode($mulaiGrafik, $selesaiGrafik),
+            'tren' => $this->rekap->trenHarian($mulaiGrafik, $selesaiGrafik),
+            'perMapel' => $this->rekap->persenPerMapel($mulaiGrafik, $selesaiGrafik),
             'daftarSiswa' => $daftarSiswa,
             'rekapUmumSiswa' => $rekapUmumSiswa,
             'rekapMapelSiswa' => $rekapMapelSiswa,
@@ -155,6 +194,10 @@ class PublicController extends Controller
             'rekapPeriodeRingkasan' => $rekapPeriodeRingkasan,
             'rekapHariEfektifCount' => $rekapHariEfektifCount,
             'cariSiswa' => $cariSiswa,
+            'daftarBulan' => $daftarBulan,
+            'selectedBulan' => $selectedBulan,
+            'selectedTahun' => $selectedTahun,
+            'bulanTerpilihDate' => $bulanTerpilihDate,
         ]);
     }
 
@@ -187,7 +230,17 @@ class PublicController extends Controller
         abort_unless($siswa->is_active, 404);
 
         $hariIni = CarbonImmutable::today();
-        [$mulai, $selesai, $labelPeriode, $pilihan] = $this->periode($request, $hariIni);
+        $selectedBulan = (int) $request->input('bulan', $hariIni->month);
+        $selectedTahun = (int) $request->input('tahun', $hariIni->year);
+        if ($request->filled('bulan_tahun')) {
+            try {
+                $bt = CarbonImmutable::parse($request->input('bulan_tahun').'-01');
+                $selectedBulan = $bt->month;
+                $selectedTahun = $bt->year;
+            } catch (\Throwable) {}
+        }
+        $bulanTerpilih = CarbonImmutable::createFromDate($selectedTahun, $selectedBulan, 1)->startOfDay();
+        [$mulai, $selesai, $labelPeriode, $pilihan] = $this->periode($request, $hariIni, $bulanTerpilih);
 
         $umum = $this->rekap->perSiswa($mulai, $selesai)->firstWhere('siswa.id', $siswa->id);
 
@@ -197,6 +250,9 @@ class PublicController extends Controller
             'perMapel' => $this->rekap->mapelUntukSiswa($siswa->id, $mulai, $selesai),
             'periodeLabel' => $labelPeriode,
             'periodePilihan' => $pilihan,
+            'daftarBulan' => \App\Support\Periode::daftarBulan(),
+            'selectedBulan' => $selectedBulan,
+            'selectedTahun' => $selectedTahun,
         ]);
     }
 
@@ -204,23 +260,37 @@ class PublicController extends Controller
     public function grafik(Request $request): JsonResponse
     {
         $hariIni = CarbonImmutable::today();
-        [$mulai, $selesai] = $this->periode($request, $hariIni);
+        $selectedBulan = (int) $request->input('bulan', $hariIni->month);
+        $selectedTahun = (int) $request->input('tahun', $hariIni->year);
+        if ($request->filled('bulan_tahun')) {
+            try {
+                $bt = CarbonImmutable::parse($request->input('bulan_tahun').'-01');
+                $selectedBulan = $bt->month;
+                $selectedTahun = $bt->year;
+            } catch (\Throwable) {}
+        }
+        $bulanTerpilih = CarbonImmutable::createFromDate($selectedTahun, $selectedBulan, 1)->startOfDay();
+        [$mulai, $selesai, $labelPeriode] = $this->periode($request, $hariIni, $bulanTerpilih);
 
         $komposisi = $this->rekap->ringkasanPeriode($mulai, $selesai);
-        $tren = $this->rekap->trenHarian($hariIni->subDays(29), $hariIni);
+        $tren = $this->rekap->trenHarian($mulai, $selesai);
         $mapel = $this->rekap->persenPerMapel($mulai, $selesai);
 
         return response()->json([
+            'label_periode' => $labelPeriode,
             'komposisi' => [
                 'labels' => ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Dispensasi'],
                 'data' => [
                     $komposisi['hadir'], $komposisi['sakit'], $komposisi['izin'],
                     $komposisi['alpa'], $komposisi['dispensasi'],
                 ],
+                'total' => $komposisi['total'],
+                'persen' => $komposisi['persen'],
             ],
             'tren' => $tren,
             'mapel' => [
                 'labels' => $mapel->pluck('singkatan'),
+                'nama' => $mapel->pluck('nama'),
                 'data' => $mapel->pluck('persen'),
                 'warna' => $mapel->pluck('warna'),
             ],
@@ -228,30 +298,31 @@ class PublicController extends Controller
     }
 
     /**
-     * Pemilih periode sederhana untuk publik: bulan ini / bulan lalu / semester.
+     * Pemilih periode untuk publik: bulan pilihan / bulan lalu / semester.
      *
      * @return array{0:CarbonImmutable,1:CarbonImmutable,2:string,3:string}
      */
-    private function periode(Request $request, CarbonImmutable $hariIni): array
+    private function periode(Request $request, CarbonImmutable $hariIni, ?CarbonImmutable $bulanTerpilih = null): array
     {
-        $defaultPeriode = $request->input('filter_rekap') === 'semester' ? 'semester' : 'bulan_ini';
+        $bulanTerpilih = $bulanTerpilih ?? $hariIni;
+        $defaultPeriode = $request->input('filter_rekap') === 'semester' ? 'semester' : 'bulanan';
         $pilihan = $request->input('periode', $defaultPeriode);
 
         return match ($pilihan) {
             'bulan_lalu' => [
                 $hariIni->subMonthNoOverflow()->startOfMonth(),
                 $hariIni->subMonthNoOverflow()->endOfMonth(),
-                \App\Support\Tanggal::bulanTahun($hariIni->subMonthNoOverflow()),
+                'Bulan '.\App\Support\Tanggal::bulanTahun($hariIni->subMonthNoOverflow()),
                 'bulan_lalu',
             ],
             'semester' => $hariIni->month >= 7
-                ? [$hariIni->setDate($hariIni->year, 7, 1), $hariIni, 'Semester Ganjil '.$hariIni->year, 'semester']
-                : [$hariIni->setDate($hariIni->year, 1, 1), $hariIni, 'Semester Genap '.$hariIni->year, 'semester'],
+                ? [$hariIni->setDate($hariIni->year, 7, 1), $hariIni->setDate($hariIni->year, 12, 31), 'Semester Ganjil '.$hariIni->year, 'semester']
+                : [$hariIni->setDate($hariIni->year, 1, 1), $hariIni->setDate($hariIni->year, 6, 30), 'Semester Genap '.$hariIni->year, 'semester'],
             default => [
-                $hariIni->startOfMonth(),
-                $hariIni->endOfMonth(),
-                \App\Support\Tanggal::bulanTahun($hariIni),
-                'bulan_ini',
+                $bulanTerpilih->startOfMonth(),
+                $bulanTerpilih->endOfMonth(),
+                'Bulan '.\App\Support\Tanggal::bulanTahun($bulanTerpilih),
+                'bulanan',
             ],
         };
     }

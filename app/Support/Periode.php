@@ -32,6 +32,37 @@ class Periode
 
         $acuan = self::tanggalAman($request->input('acuan'), CarbonImmutable::today());
 
+        // Dukungan pemilihan bulan & tahun spesifik (misal bulan=9 & tahun=2026 atau bulan_tahun=2026-09)
+        if ($request->filled('bulan') && $request->filled('tahun')) {
+            try {
+                $acuan = CarbonImmutable::createFromDate(
+                    (int) $request->input('tahun'),
+                    (int) $request->input('bulan'),
+                    1
+                )->startOfDay();
+            } catch (\Throwable) {}
+        } elseif ($request->filled('bulan_tahun')) {
+            try {
+                $acuan = CarbonImmutable::parse($request->input('bulan_tahun').'-01')->startOfDay();
+            } catch (\Throwable) {}
+        } elseif ($jenis === 'bulanan' && $request->missing('acuan')) {
+            // Bila tidak ada parameter bulan, periksa apakah bulan berjalan sudah memiliki data.
+            // Jika belum ada data sama sekali namun ada data di bulan sebelumnya, gunakan bulan terakhir yang ada data.
+            try {
+                $hariIni = CarbonImmutable::today();
+                $adaBulanIni = \Illuminate\Support\Facades\DB::table('daily_attendances')
+                    ->whereBetween('tanggal', [$hariIni->startOfMonth()->toDateString(), $hariIni->endOfMonth()->toDateString()])
+                    ->exists();
+
+                if (! $adaBulanIni) {
+                    $maxTanggal = \Illuminate\Support\Facades\DB::table('daily_attendances')->max('tanggal');
+                    if ($maxTanggal) {
+                        $acuan = CarbonImmutable::parse($maxTanggal)->startOfDay();
+                    }
+                }
+            } catch (\Throwable) {}
+        }
+
         return match ($jenis) {
             'harian' => new self($jenis, $acuan, $acuan),
             'mingguan' => new self($jenis, $acuan->startOfWeek(), $acuan->endOfWeek()),
@@ -79,7 +110,7 @@ class Periode
         }
 
         if ($this->jenis === 'bulanan' && $this->mulai->isSameMonth($this->selesai)) {
-            return Tanggal::bulanTahun($this->mulai);
+            return 'Bulan ' . Tanggal::bulanTahun($this->mulai);
         }
 
         if ($this->jenis === 'semester') {
@@ -96,6 +127,88 @@ class Periode
         return $this->mulai->diffInDays($this->selesai) + 1;
     }
 
+    /** Bulan sebelumnya untuk navigasi cepat */
+    public function bulanSebelumnya(): CarbonImmutable
+    {
+        return $this->mulai->subMonthNoOverflow()->startOfMonth();
+    }
+
+    /** Bulan berikutnya untuk navigasi cepat */
+    public function bulanBerikutnya(): CarbonImmutable
+    {
+        return $this->mulai->addMonthNoOverflow()->startOfMonth();
+    }
+
+    /**
+     * Menghasilkan daftar bulan pilihan (misal dalam tahun ajaran berjalan atau yang memiliki data absensi).
+     *
+     * @return array<int, array{bulan: int, tahun: int, kode: string, label: string, nama_bulan: string, has_data: bool}>
+     */
+    public static function daftarBulan(): array
+    {
+        $tahunAjaran = (string) \App\Models\Setting::get('tahun_ajaran', date('Y').'/'.(date('Y') + 1));
+        $parts = explode('/', $tahunAjaran);
+        $tahunMulai = isset($parts[0]) && is_numeric($parts[0]) ? (int) $parts[0] : (int) date('Y');
+        $tahunSelesai = isset($parts[1]) && is_numeric($parts[1]) ? (int) $parts[1] : $tahunMulai + 1;
+
+        // Cek bulan apa saja yang memiliki data absensi di DB
+        $bulanDenganData = [];
+        try {
+            $bulanDenganData = \Illuminate\Support\Facades\DB::table('daily_attendances')
+                ->selectRaw("DISTINCT DATE_FORMAT(tanggal, '%Y-%m') as ym")
+                ->pluck('ym')
+                ->flip()
+                ->all();
+        } catch (\Throwable) {}
+
+        $daftar = [];
+        // Semester Ganjil: Juli - Desember (Tahun Mulai)
+        for ($m = 7; $m <= 12; $m++) {
+            $d = CarbonImmutable::createFromDate($tahunMulai, $m, 1);
+            $kode = $d->format('Y-m');
+            $daftar[$kode] = [
+                'bulan' => $m,
+                'tahun' => $tahunMulai,
+                'kode' => $kode,
+                'label' => Tanggal::bulanTahun($d),
+                'nama_bulan' => Tanggal::BULAN[$m],
+                'has_data' => isset($bulanDenganData[$kode]),
+            ];
+        }
+        // Semester Genap: Januari - Juni (Tahun Selesai)
+        for ($m = 1; $m <= 6; $m++) {
+            $d = CarbonImmutable::createFromDate($tahunSelesai, $m, 1);
+            $kode = $d->format('Y-m');
+            $daftar[$kode] = [
+                'bulan' => $m,
+                'tahun' => $tahunSelesai,
+                'kode' => $kode,
+                'label' => Tanggal::bulanTahun($d),
+                'nama_bulan' => Tanggal::BULAN[$m],
+                'has_data' => isset($bulanDenganData[$kode]),
+            ];
+        }
+
+        // Jika ada bulan yang memiliki data di luar rentang standar di atas, tambahkan juga
+        foreach (array_keys($bulanDenganData) as $ym) {
+            if (! isset($daftar[$ym])) {
+                try {
+                    $d = CarbonImmutable::parse($ym.'-01');
+                    $daftar[$ym] = [
+                        'bulan' => $d->month,
+                        'tahun' => $d->year,
+                        'kode' => $ym,
+                        'label' => Tanggal::bulanTahun($d),
+                        'nama_bulan' => Tanggal::BULAN[$d->month],
+                        'has_data' => true,
+                    ];
+                } catch (\Throwable) {}
+            }
+        }
+
+        return array_values($daftar);
+    }
+
     /** @return array<string,string> query string untuk mempertahankan filter antar-link */
     public function query(): array
     {
@@ -104,6 +217,9 @@ class Periode
             'mulai' => $this->mulai->toDateString(),
             'selesai' => $this->selesai->toDateString(),
             'acuan' => $this->mulai->toDateString(),
+            'bulan' => (string) $this->mulai->month,
+            'tahun' => (string) $this->mulai->year,
+            'bulan_tahun' => $this->mulai->format('Y-m'),
         ];
     }
 }

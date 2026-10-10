@@ -69,6 +69,7 @@ class RekapController extends Controller
         $dasar = [
             'periode' => $periode,
             'ringkasan' => $this->rekap->ringkasanPeriode($periode->mulai, $periode->selesai),
+            'daftarBulan' => Periode::daftarBulan(),
         ];
 
         return $dasar + match ($jenis) {
