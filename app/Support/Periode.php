@@ -80,6 +80,21 @@ class Periode
             : new self('semester', $acuan->setDate($acuan->year, 1, 1), $acuan->setDate($acuan->year, 6, 30));
     }
 
+    /** Rentang awal semester berjalan hingga tanggal acuan/hari ini (real-time). */
+    public static function semesterRealtime(?CarbonImmutable $acuan = null): self
+    {
+        $acuan = ($acuan ?? CarbonImmutable::today())->startOfDay();
+
+        return $acuan->month >= 7
+            ? new self('semester', $acuan->setDate($acuan->year, 7, 1), $acuan)
+            : new self('semester', $acuan->setDate($acuan->year, 1, 1), $acuan);
+    }
+
+    public function namaSemester(): string
+    {
+        return $this->mulai->month >= 7 ? 'Semester Ganjil' : 'Semester Genap';
+    }
+
     private static function custom(Request $request, CarbonImmutable $acuan): self
     {
         $mulai = self::tanggalAman($request->input('mulai'), $acuan->startOfMonth());

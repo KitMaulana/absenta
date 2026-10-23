@@ -8,6 +8,7 @@ use App\Models\Schedule;
 use App\Models\Setting;
 use App\Models\SubjectAttendance;
 use App\Services\RekapService;
+use App\Support\Periode;
 use Carbon\CarbonImmutable;
 use Illuminate\View\View;
 
@@ -17,6 +18,7 @@ class DashboardController extends Controller
     {
         $hariIni = CarbonImmutable::today();
         $awalBulan = $hariIni->startOfMonth();
+        $periodeSemester = Periode::semesterRealtime($hariIni);
         $liburHariIni = Holiday::whereDate('tanggal', $hariIni)->first();
 
         $hari = Schedule::hariDari($hariIni);
@@ -34,6 +36,9 @@ class DashboardController extends Controller
             'liburHariIni' => $liburHariIni,
             'ringkasan' => $rekap->ringkasanHarian($hariIni),
             'bulanIni' => $rekap->ringkasanPeriode($awalBulan, $hariIni),
+            'periodeSemester' => $periodeSemester,
+            'semesterIni' => $rekap->ringkasanPeriode($periodeSemester->mulai, $periodeSemester->selesai),
+            'peringatanSemester' => $rekap->peringatanSemester($periodeSemester->mulai, $periodeSemester->selesai),
             'tren' => $tren,
             'rawanAlpa' => $rekap->siswaRawanAlpa($awalBulan, $hariIni),
             'jadwalHariIni' => $jadwalHariIni,

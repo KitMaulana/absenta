@@ -83,6 +83,7 @@ class RekapController extends Controller
             'bulanan', 'semester' => [
                 'baris' => $this->rekap->perSiswa($periode->mulai, $periode->selesai),
                 'rawanAlpa' => $this->rekap->siswaRawanAlpa($periode->mulai, $periode->selesai),
+                'peringatanSemester' => $this->rekap->peringatanSemester($periode->mulai, $periode->selesai),
                 'perMapel' => $this->rekap->persenPerMapel($periode->mulai, $periode->selesai),
                 'jumlahHariEfektif' => count($this->rekap->hariEfektif($periode->mulai, $periode->selesai)),
             ],

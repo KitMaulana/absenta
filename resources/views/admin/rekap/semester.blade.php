@@ -74,6 +74,44 @@
     </x-card>
 
     <div class="space-y-5">
+        {{-- Kartu Peringatan Kehadiran < 75% (Umum & Mapel) --}}
+        <x-card judul="Peringatan Kehadiran &lt; 75% (Umum &amp; Mapel)">
+            @if ($peringatanSemester['gabungan']->isEmpty())
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-center text-xs text-emerald-900">
+                    <p class="font-bold">Semua Siswa &ge; 75%</p>
+                    <p class="mt-0.5 text-emerald-700">Seluruh siswa memenuhi batas minimal 75% baik harian umum maupun mata pelajaran.</p>
+                </div>
+            @else
+                <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                    @foreach ($peringatanSemester['gabungan'] as $item)
+                        <div class="rounded-xl border border-rose-200/70 bg-rose-50/60 p-3 text-xs">
+                            <div class="flex items-center justify-between gap-2">
+                                <a href="{{ route('admin.rekap', ['jenis' => 'siswa', 'siswa' => $item->siswa->id, 'periode' => 'semester']) }}"
+                                   class="truncate font-bold text-rose-950 hover:text-indigo-700">
+                                    {{ $item->siswa->no_absen }}. {{ $item->siswa->nama }}
+                                </a>
+                                @if ($item->is_umum_rendah)
+                                    <span class="shrink-0 rounded-md bg-rose-200/80 px-2 py-0.5 text-[10px] font-black text-rose-900">
+                                        Umum: {{ $item->umum->persen }}%
+                                    </span>
+                                @endif
+                            </div>
+                            @if ($item->mapel_rendah->isNotEmpty())
+                                <div class="mt-1.5 flex flex-wrap gap-1">
+                                    @foreach ($item->mapel_rendah as $m)
+                                        <span class="inline-flex items-center gap-1 rounded bg-white/90 border border-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-800">
+                                            <span class="h-1.5 w-1.5 rounded-full" style="background-color: {{ $m->warna }}"></span>
+                                            {{ $m->singkatan }}: <strong class="text-rose-700">{{ $m->persen }}%</strong>
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </x-card>
+
         {{-- Kartu Perhatian Alpa --}}
         <x-card judul="Perhatian Khusus (Alpa &ge; 3)">
             @if ($rawanAlpa->isEmpty())

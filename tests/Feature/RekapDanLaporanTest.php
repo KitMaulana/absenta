@@ -4,10 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\DailyAttendance;
 use App\Models\Holiday;
+use App\Models\Schedule;
 use App\Models\Setting;
 use App\Models\Student;
+use App\Models\Subject;
+use App\Models\SubjectAttendance;
 use App\Models\User;
 use App\Services\RekapService;
+use App\Support\Periode;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -179,5 +183,69 @@ class RekapDanLaporanTest extends TestCase
         $ringkasan = $rekap->ringkasanHarian($tanggal);
         $this->assertTrue($ringkasan['is_libur']);
         $this->assertCount(0, $rekap->tidakHadirPada($tanggal));
+    }
+
+    public function test_peringatan_semester_mendeteksi_kehadiran_dibawah_75_persen_umum_dan_mapel(): void
+    {
+        $siswaAman = Student::create(['no_absen' => 1, 'nama' => 'Siswa Aman', 'jenis_kelamin' => 'L', 'no_hp_ortu' => '081234567890']);
+        $siswaUmumRendah = Student::create(['no_absen' => 2, 'nama' => 'Siswa Umum Rendah', 'jenis_kelamin' => 'P', 'no_hp_ortu' => '081299998888']);
+        $siswaMapelRendah = Student::create(['no_absen' => 3, 'nama' => 'Siswa Bolos Mapel', 'jenis_kelamin' => 'L']);
+        $siswaTanpaData = Student::create(['no_absen' => 4, 'nama' => 'Siswa Belum Diinput', 'jenis_kelamin' => 'P']);
+
+        $matematika = Subject::create(['nama' => 'Matematika', 'singkatan' => 'MAT', 'warna' => '#2563eb', 'is_active' => true]);
+        $fisika = Subject::create(['nama' => 'Fisika', 'singkatan' => 'FIS', 'warna' => '#16a34a', 'is_active' => true]);
+
+        $jadwalMat = Schedule::create(['hari' => 'senin', 'jam_ke' => 1, 'subject_id' => $matematika->id]);
+        $jadwalFis = Schedule::create(['hari' => 'senin', 'jam_ke' => 2, 'subject_id' => $fisika->id]);
+
+        $periode = Periode::semesterRealtime(CarbonImmutable::today());
+        $mulai = $periode->mulai;
+
+        // 4 hari tercatat di dalam semester berjalan:
+        // - Siswa Aman: 4/4 hadir umum (100%), 4/4 hadir MAT (100%)
+        // - Siswa Umum Rendah: 2/4 hadir umum (50% < 75%), butuh +4 hari hadir berturut-turut untuk >= 75% (6/8 = 75%)
+        // - Siswa Bolos Mapel: 4/4 hadir umum (100%), tapi di MAT hanya 2/4 hadir (50% < 75%), sedangkan FIS 4/4 hadir (100%)
+        for ($i = 0; $i < 4; $i++) {
+            $tgl = $mulai->addDays($i)->toDateString();
+
+            DailyAttendance::create(['student_id' => $siswaAman->id, 'tanggal' => $tgl, 'status' => 'hadir']);
+            DailyAttendance::create(['student_id' => $siswaUmumRendah->id, 'tanggal' => $tgl, 'status' => $i < 2 ? 'hadir' : 'alpa']);
+            DailyAttendance::create(['student_id' => $siswaMapelRendah->id, 'tanggal' => $tgl, 'status' => 'hadir']);
+
+            SubjectAttendance::create(['student_id' => $siswaAman->id, 'tanggal' => $tgl, 'schedule_id' => $jadwalMat->id, 'status' => 'hadir']);
+            SubjectAttendance::create(['student_id' => $siswaMapelRendah->id, 'tanggal' => $tgl, 'schedule_id' => $jadwalMat->id, 'status' => $i < 2 ? 'hadir' : 'alpa']);
+            SubjectAttendance::create(['student_id' => $siswaMapelRendah->id, 'tanggal' => $tgl, 'schedule_id' => $jadwalFis->id, 'status' => 'hadir']);
+        }
+
+        $peringatan = app(RekapService::class)->peringatanSemester($periode->mulai, $periode->selesai);
+
+        // Siswa tanpa data & siswa aman tidak boleh masuk daftar berisiko
+        $this->assertSame(2, $peringatan['statistik']['total_siswa_berisiko']);
+        $this->assertSame(1, $peringatan['statistik']['jumlah_umum_rendah']);
+        $this->assertSame(1, $peringatan['statistik']['jumlah_mapel_rendah']);
+
+        $umumItem = $peringatan['umum']->first();
+        $this->assertSame('Siswa Umum Rendah', $umumItem->siswa->nama);
+        $this->assertSame(50.0, $umumItem->umum->persen);
+        $this->assertSame(4, $umumItem->umum->butuh_hadir);
+        $this->assertSame('rawan', $umumItem->umum->kategori);
+        $this->assertNotNull($umumItem->wa_url);
+
+        $mapelItem = $peringatan['mapel']->first();
+        $this->assertSame('Siswa Bolos Mapel', $mapelItem->siswa->nama);
+        $this->assertFalse($mapelItem->is_umum_rendah);
+        $this->assertTrue($mapelItem->is_mapel_rendah);
+        $this->assertCount(1, $mapelItem->mapel_rendah);
+        $this->assertSame('Matematika', $mapelItem->mapel_rendah->first()->nama);
+        $this->assertSame(50.0, $mapelItem->mapel_rendah->first()->persen);
+        $this->assertSame(4, $mapelItem->mapel_rendah->first()->butuh_jp);
+
+        // Pastikan tampil di halaman dashboard admin
+        $response = $this->actingAs($this->wali)->get('/admin');
+        $response->assertOk();
+        $response->assertSee('Peringatan Kehadiran 1 Semester');
+        $response->assertSee('Siswa Umum Rendah');
+        $response->assertSee('Siswa Bolos Mapel');
+        $response->assertDontSee('Siswa Belum Diinput');
     }
 }
